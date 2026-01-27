@@ -119,3 +119,84 @@ model RewardEntitlement {
   updatedAt   DateTime @updatedAt
   reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 }
+
+model Mt5Trader {
+  id            String               @id @default(uuid())
+  externalId    String               @unique
+  name          String
+  accountStatus String
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  accounts      Mt5TradingAccount[]
+  metrics       Mt5TraderMetrics[]
+  score         Mt5TraderScore?
+
+  @@map("mt5_traders")
+}
+
+model Mt5TradingAccount {
+  id         String     @id @default(uuid())
+  traderId   String
+  externalId String     @unique
+  balance    Float
+  leverage   Int
+  currency   String
+  status     String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  trader     Mt5Trader  @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  trades     Mt5Trade[]
+
+  @@index([traderId])
+  @@map("mt5_trading_accounts")
+}
+
+model Mt5Trade {
+  id         String            @id @default(uuid())
+  externalId String            @unique
+  accountId  String
+  symbol     String
+  volume     Float
+  profitLoss Float
+  fees       Float
+  openTime   DateTime
+  closeTime  DateTime?
+  status     String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  account    Mt5TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("mt5_trades")
+}
+
+model Mt5TraderMetrics {
+  id                String    @id @default(uuid())
+  traderId          String    @unique
+  profitFactor      Float
+  winRate           Float
+  drawdown          Float
+  totalTradingDays  Int
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  trader            Mt5Trader @relation(fields: [traderId], references: [id], onDelete: Cascade)
+
+  @@index([traderId])
+  @@map("mt5_trader_metrics")
+}
+
+model Mt5TraderScore {
+  id                String    @id @default(uuid())
+  traderId          String    @unique
+  consistencyScore  Float
+  tier              String?
+  rank              Int?
+  eligible          Boolean   @default(false)
+  lastCalculatedAt  DateTime
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  trader            Mt5Trader @relation(fields: [traderId], references: [id], onDelete: Cascade)
+
+  @@index([rank])
+  @@map("mt5_trader_scores")
+}

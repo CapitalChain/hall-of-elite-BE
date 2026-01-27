@@ -10,6 +10,7 @@ import rewardsRoutes from "./modules/rewards/rewards.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import mt5Routes from "./modules/mt5/mt5.routes";
 import authRoutes from "./modules/auth/auth.routes";
+import scoringRoutes from "./modules/scoring/scoring.routes";
 
 export const createApp = (): Express => {
   const app = express();
@@ -29,6 +30,7 @@ export const createApp = (): Express => {
   app.use("/rewards", rewardsRoutes);
   app.use("/admin", adminRoutes);
   app.use("/mt5", mt5Routes);
+  app.use("/scoring", scoringRoutes);
 
   app.use(errorHandler);
 
