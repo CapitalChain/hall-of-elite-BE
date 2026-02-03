@@ -33,7 +33,7 @@ Backend API for the Hall of Elite platform.
 ## Environment variables
 
 Required:
-- `DATABASE_URL`
+- `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` (min 32 chars)
 
 Optional:
@@ -41,6 +41,19 @@ Optional:
 - `CORS_ORIGIN` (default `http://localhost:6100`)
 - `JWT_EXPIRES_IN` (default `7d`)
 - `NODE_ENV` (`development` | `production` | `test`)
+
+### Database: local vs production
+
+- **Local:** Use your existing local DB. Example in `.env`:  
+  `DATABASE_URL=postgresql://ixbspartan@localhost:5432/capitalchain_mt5?schema=public`
+- **Production:** Use the server database. On your production host, set:
+  - Database: `hall_of_elite`
+  - User: `hall_user`
+  - Password: `Success2025`  
+  Example:  
+  `DATABASE_URL=postgresql://hall_user:Success2025@YOUR_SERVER_HOST:5432/hall_of_elite?schema=public`  
+  Replace `YOUR_SERVER_HOST` with your PostgreSQL host (hostname or IP).  
+  Copy `.env.example` to `.env` and adjust; for production, set these in your deployment platform (e.g. env vars in Vercel/Railway/server).
 
 ## Running locally
 

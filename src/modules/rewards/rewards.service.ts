@@ -1,59 +1,35 @@
 import { TraderTier } from "../../types";
 import { prisma } from "../../prisma/client";
 import { RewardEligibilityDTO } from "./rewards.dto";
+import { TIER_REWARDS_MAP } from "./tier-rewards.config";
 
 export class RewardsService {
-  private tierRewardMap: Record<TraderTier, RewardEligibilityDTO["rewards"]> = {
-    [TraderTier.BRONZE]: {
-      phoenixAddOn: false,
-      payoutBoost: false,
-      cashback: false,
-      merchandise: false,
-    },
-    [TraderTier.SILVER]: {
-      phoenixAddOn: false,
-      payoutBoost: false,
-      cashback: true,
-      merchandise: false,
-    },
-    [TraderTier.GOLD]: {
-      phoenixAddOn: false,
-      payoutBoost: true,
-      cashback: true,
-      merchandise: false,
-    },
-    [TraderTier.PLATINUM]: {
-      phoenixAddOn: false,
-      payoutBoost: true,
-      cashback: true,
-      merchandise: true,
-    },
-    [TraderTier.DIAMOND]: {
-      phoenixAddOn: true,
-      payoutBoost: true,
-      cashback: true,
-      merchandise: true,
-    },
-    [TraderTier.ELITE]: {
-      phoenixAddOn: true,
-      payoutBoost: true,
-      cashback: true,
-      merchandise: true,
-    },
-  };
-
   async getRewardEligibility(traderId: string): Promise<RewardEligibilityDTO | null> {
     try {
-      const traderScore = await prisma.traderScore.findUnique({
-        where: { tradingAccountId: traderId },
-      });
+      // Resolve tier: prefer Mt5TraderScore (by traderId), fallback to TraderScore (by tradingAccountId)
+      let tier: TraderTier | null = null;
 
-      if (!traderScore) {
+      const mt5Score = await prisma.mt5TraderScore.findUnique({
+        where: { traderId },
+      });
+      if (mt5Score?.tier) {
+        tier = mt5Score.tier as TraderTier;
+      }
+
+      if (tier == null) {
+        const traderScore = await prisma.traderScore.findUnique({
+          where: { tradingAccountId: traderId },
+        });
+        if (traderScore?.tier) {
+          tier = traderScore.tier as TraderTier;
+        }
+      }
+
+      if (tier == null) {
         return null;
       }
 
-      const tier = traderScore.tier as TraderTier;
-      const baseRewards = this.tierRewardMap[tier] || this.tierRewardMap[TraderTier.BRONZE];
+      const baseRewards = TIER_REWARDS_MAP[tier] ?? TIER_REWARDS_MAP[TraderTier.BRONZE];
 
       const rewardEntitlements = await prisma.rewardEntitlement.findMany({
         where: {

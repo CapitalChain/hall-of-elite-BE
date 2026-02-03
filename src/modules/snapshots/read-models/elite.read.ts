@@ -37,11 +37,14 @@ export const getEliteLeaderboardFromLatestSnapshot = async (
     take: limit,
   });
 
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const traderIds = rows.map((row) => row.traderId);
   const traders = await prisma.mt5Trader.findMany({
     where: {
-      id: {
-        in: rows.map((row) => row.traderId),
-      },
+      id: { in: traderIds },
     },
   });
 

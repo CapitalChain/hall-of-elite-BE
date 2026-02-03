@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const getTraderParamsSchema = z.object({
-  id: z.string().uuid("Invalid trader ID format"),
+  id: z.string().min(1, "Trader ID is required"),
 });
 
 export const getTradersQuerySchema = z.object({

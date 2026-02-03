@@ -34,4 +34,11 @@ export const env = envSchema.parse({
   CORS_ORIGIN: process.env.CORS_ORIGIN,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
+  MT5_SERVER: process.env.MT5_SERVER,
+  MT5_LOGIN: process.env.MT5_LOGIN,
+  MT5_PASSWORD: process.env.MT5_PASSWORD,
+  MT5_API_URL: process.env.MT5_API_URL,
+  MT5_API_KEY: process.env.MT5_API_KEY,
+  MT5_RETRY_ATTEMPTS: process.env.MT5_RETRY_ATTEMPTS,
+  MT5_RETRY_DELAY_MS: process.env.MT5_RETRY_DELAY_MS,
 });

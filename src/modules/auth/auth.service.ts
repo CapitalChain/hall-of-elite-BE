@@ -63,14 +63,14 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new AppError("Invalid email or password", 401);
+      throw new AppError("Email not found. Please register first or check your email address", 401);
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new AppError("Invalid email or password", 401);
+      throw new AppError("Incorrect password. Please try again", 401);
     }
 
     // Generate JWT token
@@ -108,6 +108,15 @@ export class AuthService {
     } catch (error) {
       throw new AppError("Invalid or expired token", 401);
     }
+  }
+
+  /** Get full user for authenticated request (e.g. GET /auth/me). */
+  async getUserById(userId: string): Promise<{ id: string; email: string; displayName: string; role: string } | null> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, displayName: true, role: true },
+    });
+    return user;
   }
 
   private generateToken(payload: UserPayload): string {

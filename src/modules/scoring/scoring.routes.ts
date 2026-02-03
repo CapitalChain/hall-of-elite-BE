@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { runScoring } from "./scoring.controller";
+import { getScoringConfig, runScoring } from "./scoring.controller";
 
 const router = Router();
 
+router.get("/config", getScoringConfig);
 router.post("/run", runScoring);
 
 export default router;

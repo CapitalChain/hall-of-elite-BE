@@ -1,5 +1,6 @@
 import { TraderTier } from "../../types";
 import { TierConfigDTO, RewardConfigDTO } from "./admin.dto";
+import { TIER_REWARDS_MAP } from "../rewards/tier-rewards.config";
 
 export const staticTierConfig: Record<TraderTier, Omit<TierConfigDTO, "tierId">> = {
   [TraderTier.BRONZE]: {
@@ -51,41 +52,15 @@ export const staticTierConfig: Record<TraderTier, Omit<TierConfigDTO, "tierId">>
   },
 };
 
-export const staticRewardConfig: Record<TraderTier, Omit<RewardConfigDTO, "tierId" | "tierName">> = {
-  [TraderTier.BRONZE]: {
-    phoenixAddOn: false,
-    payoutBoost: false,
-    cashback: false,
-    merchandise: false,
-  },
-  [TraderTier.SILVER]: {
-    phoenixAddOn: false,
-    payoutBoost: false,
-    cashback: true,
-    merchandise: false,
-  },
-  [TraderTier.GOLD]: {
-    phoenixAddOn: false,
-    payoutBoost: true,
-    cashback: true,
-    merchandise: false,
-  },
-  [TraderTier.PLATINUM]: {
-    phoenixAddOn: false,
-    payoutBoost: true,
-    cashback: true,
-    merchandise: true,
-  },
-  [TraderTier.DIAMOND]: {
-    phoenixAddOn: true,
-    payoutBoost: true,
-    cashback: true,
-    merchandise: true,
-  },
-  [TraderTier.ELITE]: {
-    phoenixAddOn: true,
-    payoutBoost: true,
-    cashback: true,
-    merchandise: true,
-  },
-};
+/** Derived from shared TIER_REWARDS_MAP (single source of truth). */
+export const staticRewardConfig: Record<TraderTier, Omit<RewardConfigDTO, "tierId" | "tierName">> = Object.fromEntries(
+  (Object.entries(TIER_REWARDS_MAP) as [TraderTier, typeof TIER_REWARDS_MAP[TraderTier]][]).map(([tier, flags]) => [
+    tier,
+    {
+      phoenixAddOn: flags.phoenixAddOn,
+      payoutBoost: flags.payoutBoost,
+      cashback: flags.cashback,
+      merchandise: flags.merchandise,
+    },
+  ])
+) as Record<TraderTier, Omit<RewardConfigDTO, "tierId" | "tierName">>;
