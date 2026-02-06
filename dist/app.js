@@ -18,13 +18,12 @@ const mt5_routes_1 = __importDefault(require("./modules/mt5/mt5.routes"));
 const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
 const scoring_routes_1 = __importDefault(require("./modules/scoring/scoring.routes"));
 const progress_routes_1 = __importDefault(require("./modules/progress/progress.routes"));
+const payout_routes_1 = __importDefault(require("./modules/payout/payout.routes"));
 const createApp = () => {
     const app = (0, express_1.default)();
     const allowedOrigins = [
         env_1.env.CORS_ORIGIN,
-        "https://hall.capitalchain.co",
-        "http://localhost:6100",
-        "http://localhost:3000",
+        ...(env_1.env.CORS_ORIGINS ? env_1.env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
     ];
     app.use((0, cors_1.default)({
         origin: (origin, callback) => {
@@ -49,6 +48,7 @@ const createApp = () => {
     app.use("/mt5", mt5_routes_1.default);
     app.use("/scoring", scoring_routes_1.default);
     app.use("/user", progress_routes_1.default);
+    app.use("/payout", payout_routes_1.default);
     app.use(errorHandler_1.errorHandler);
     return app;
 };

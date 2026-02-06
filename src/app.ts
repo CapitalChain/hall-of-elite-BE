@@ -12,15 +12,14 @@ import mt5Routes from "./modules/mt5/mt5.routes";
 import authRoutes from "./modules/auth/auth.routes";
 import scoringRoutes from "./modules/scoring/scoring.routes";
 import progressRoutes from "./modules/progress/progress.routes";
+import payoutRoutes from "./modules/payout/payout.routes";
 
 export const createApp = (): Express => {
   const app = express();
 
   const allowedOrigins = [
     env.CORS_ORIGIN,
-    "https://hall.capitalchain.co",
-    "http://localhost:6100",
-    "http://localhost:3000",
+    ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
   ];
 
   app.use(cors({
@@ -46,6 +45,7 @@ export const createApp = (): Express => {
   app.use("/mt5", mt5Routes);
   app.use("/scoring", scoringRoutes);
   app.use("/user", progressRoutes);
+  app.use("/payout", payoutRoutes);
 
   app.use(errorHandler);
 

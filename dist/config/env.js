@@ -14,6 +14,8 @@ const envSchema = zod_1.z.object({
     PORT: zod_1.z.string().default("6200"),
     DATABASE_URL: zod_1.z.string().url(),
     CORS_ORIGIN: zod_1.z.string().default("http://localhost:6100"),
+    /** Comma-separated list of additional CORS origins (e.g. production frontend URL) */
+    CORS_ORIGINS: zod_1.z.string().optional(),
     JWT_SECRET: zod_1.z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     JWT_EXPIRES_IN: zod_1.z.string().default("7d"),
     // MT5 Configuration
@@ -30,6 +32,7 @@ exports.env = envSchema.parse({
     PORT: process.env.PORT,
     DATABASE_URL: process.env.DATABASE_URL,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
+    CORS_ORIGINS: process.env.CORS_ORIGINS,
     JWT_SECRET: process.env.JWT_SECRET,
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
     MT5_SERVER: process.env.MT5_SERVER,

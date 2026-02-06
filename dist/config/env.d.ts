@@ -4,6 +4,8 @@ declare const envSchema: z.ZodObject<{
     PORT: z.ZodDefault<z.ZodString>;
     DATABASE_URL: z.ZodString;
     CORS_ORIGIN: z.ZodDefault<z.ZodString>;
+    /** Comma-separated list of additional CORS origins (e.g. production frontend URL) */
+    CORS_ORIGINS: z.ZodOptional<z.ZodString>;
     JWT_SECRET: z.ZodString;
     JWT_EXPIRES_IN: z.ZodDefault<z.ZodString>;
     MT5_SERVER: z.ZodOptional<z.ZodString>;
@@ -22,6 +24,7 @@ declare const envSchema: z.ZodObject<{
     JWT_EXPIRES_IN: string;
     MT5_RETRY_ATTEMPTS: string;
     MT5_RETRY_DELAY_MS: string;
+    CORS_ORIGINS?: string | undefined;
     MT5_SERVER?: string | undefined;
     MT5_LOGIN?: string | undefined;
     MT5_PASSWORD?: string | undefined;
@@ -33,6 +36,7 @@ declare const envSchema: z.ZodObject<{
     NODE_ENV?: "development" | "production" | "test" | undefined;
     PORT?: string | undefined;
     CORS_ORIGIN?: string | undefined;
+    CORS_ORIGINS?: string | undefined;
     JWT_EXPIRES_IN?: string | undefined;
     MT5_SERVER?: string | undefined;
     MT5_LOGIN?: string | undefined;
@@ -52,6 +56,7 @@ export declare const env: {
     JWT_EXPIRES_IN: string;
     MT5_RETRY_ATTEMPTS: string;
     MT5_RETRY_DELAY_MS: string;
+    CORS_ORIGINS?: string | undefined;
     MT5_SERVER?: string | undefined;
     MT5_LOGIN?: string | undefined;
     MT5_PASSWORD?: string | undefined;

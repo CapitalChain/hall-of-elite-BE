@@ -1,1 +1,1 @@
-{"version":3,"file":"progress.config.d.ts","sourceRoot":"","sources":["../../../src/modules/progress/progress.config.ts"],"names":[],"mappings":"AAAA;;;GAGG;AACH,eAAO,MAAM,wBAAwB,EAAE,SAAS,MAAM,EAW5C,CAAC;AAEX,eAAO,MAAM,WAAW,QAAkC,CAAC"}
+{"version":3,"file":"progress.config.d.ts","sourceRoot":"","sources":["../../../src/modules/progress/progress.config.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AACH,eAAO,MAAM,wBAAwB,EAAE,SAAS,MAAM,EAW5C,CAAC;AAEX,kEAAkE;AAClE,eAAO,MAAM,gBAAgB,KAAK,CAAC;AAEnC,uDAAuD;AACvD,eAAO,MAAM,sBAAsB,MAAM,CAAC;AAE1C,eAAO,MAAM,WAAW,QAAkC,CAAC"}
