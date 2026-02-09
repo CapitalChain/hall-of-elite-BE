@@ -11,12 +11,12 @@ export declare const getTradersQuerySchema: z.ZodObject<{
     limit: z.ZodEffects<z.ZodOptional<z.ZodString>, number, string | undefined>;
     tier: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    page: number;
     limit: number;
+    page: number;
     tier?: string | undefined;
 }, {
+    limit?: string | undefined;
     tier?: string | undefined;
     page?: string | undefined;
-    limit?: string | undefined;
 }>;
 //# sourceMappingURL=trader.validator.d.ts.map

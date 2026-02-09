@@ -10,6 +10,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const env_1 = require("./config/env");
 const logger_1 = require("./middlewares/logger");
 const errorHandler_1 = require("./middlewares/errorHandler");
+const rateLimit_1 = require("./middlewares/rateLimit");
 const health_routes_1 = __importDefault(require("./routes/health.routes"));
 const trader_routes_1 = __importDefault(require("./routes/trader.routes"));
 const rewards_routes_1 = __importDefault(require("./modules/rewards/rewards.routes"));
@@ -40,6 +41,10 @@ const createApp = () => {
     app.use(express_1.default.urlencoded({ extended: true }));
     app.use((0, cookie_parser_1.default)());
     app.use(logger_1.requestLogger);
+    // General API rate limit (all routes)
+    app.use(rateLimit_1.apiRateLimiter);
+    // Stricter rate limit for auth (login/register/logout)
+    app.use("/auth", rateLimit_1.authRateLimiter);
     app.use("/health", health_routes_1.default);
     app.use("/auth", auth_routes_1.default);
     app.use("/elite/traders", trader_routes_1.default);

@@ -52,17 +52,20 @@ class AuthService {
         };
     }
     async login(data) {
-        const { email, password } = data;
-        // Find user
+        const password = (data.password ?? "").trim();
+        const email = (data.email ?? "").trim().toLowerCase();
+        // Find user (normalize email so Demo1@... matches demo1@...)
         const user = await database_1.prisma.user.findUnique({
             where: { email },
         });
         if (!user) {
+            console.warn("[Auth] Login failed: user not found for email:", email);
             throw new errorHandler_1.AppError("Email not found. Please register first or check your email address", 401);
         }
-        // Verify password
+        // Verify password (compare trimmed input with stored hash)
         const isPasswordValid = await bcrypt_1.default.compare(password, user.password);
         if (!isPasswordValid) {
+            console.warn("[Auth] Login failed: invalid password for email:", email);
             throw new errorHandler_1.AppError("Incorrect password. Please try again", 401);
         }
         // Generate JWT token

@@ -15,6 +15,10 @@ declare const envSchema: z.ZodObject<{
     MT5_API_KEY: z.ZodOptional<z.ZodString>;
     MT5_RETRY_ATTEMPTS: z.ZodDefault<z.ZodString>;
     MT5_RETRY_DELAY_MS: z.ZodDefault<z.ZodString>;
+    RATE_LIMIT_AUTH_MAX: z.ZodOptional<z.ZodString>;
+    RATE_LIMIT_AUTH_WINDOW_MS: z.ZodOptional<z.ZodString>;
+    RATE_LIMIT_API_MAX: z.ZodOptional<z.ZodString>;
+    RATE_LIMIT_API_WINDOW_MS: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     NODE_ENV: "development" | "production" | "test";
     PORT: string;
@@ -30,6 +34,10 @@ declare const envSchema: z.ZodObject<{
     MT5_PASSWORD?: string | undefined;
     MT5_API_URL?: string | undefined;
     MT5_API_KEY?: string | undefined;
+    RATE_LIMIT_AUTH_MAX?: string | undefined;
+    RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
+    RATE_LIMIT_API_MAX?: string | undefined;
+    RATE_LIMIT_API_WINDOW_MS?: string | undefined;
 }, {
     DATABASE_URL: string;
     JWT_SECRET: string;
@@ -45,6 +53,10 @@ declare const envSchema: z.ZodObject<{
     MT5_API_KEY?: string | undefined;
     MT5_RETRY_ATTEMPTS?: string | undefined;
     MT5_RETRY_DELAY_MS?: string | undefined;
+    RATE_LIMIT_AUTH_MAX?: string | undefined;
+    RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
+    RATE_LIMIT_API_MAX?: string | undefined;
+    RATE_LIMIT_API_WINDOW_MS?: string | undefined;
 }>;
 export type Env = z.infer<typeof envSchema>;
 export declare const env: {
@@ -62,6 +74,10 @@ export declare const env: {
     MT5_PASSWORD?: string | undefined;
     MT5_API_URL?: string | undefined;
     MT5_API_KEY?: string | undefined;
+    RATE_LIMIT_AUTH_MAX?: string | undefined;
+    RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
+    RATE_LIMIT_API_MAX?: string | undefined;
+    RATE_LIMIT_API_WINDOW_MS?: string | undefined;
 };
 export {};
 //# sourceMappingURL=env.d.ts.map
