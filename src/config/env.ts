@@ -25,6 +25,11 @@ const envSchema = z.object({
   MT5_API_KEY: z.string().optional(),
   MT5_RETRY_ATTEMPTS: z.string().default("3"),
   MT5_RETRY_DELAY_MS: z.string().default("1000"),
+  // Rate limiting (optional; defaults below)
+  RATE_LIMIT_AUTH_MAX: z.string().optional(),
+  RATE_LIMIT_AUTH_WINDOW_MS: z.string().optional(),
+  RATE_LIMIT_API_MAX: z.string().optional(),
+  RATE_LIMIT_API_WINDOW_MS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -44,4 +49,8 @@ export const env = envSchema.parse({
   MT5_API_KEY: process.env.MT5_API_KEY,
   MT5_RETRY_ATTEMPTS: process.env.MT5_RETRY_ATTEMPTS,
   MT5_RETRY_DELAY_MS: process.env.MT5_RETRY_DELAY_MS,
+  RATE_LIMIT_AUTH_MAX: process.env.RATE_LIMIT_AUTH_MAX,
+  RATE_LIMIT_AUTH_WINDOW_MS: process.env.RATE_LIMIT_AUTH_WINDOW_MS,
+  RATE_LIMIT_API_MAX: process.env.RATE_LIMIT_API_MAX,
+  RATE_LIMIT_API_WINDOW_MS: process.env.RATE_LIMIT_API_WINDOW_MS,
 });

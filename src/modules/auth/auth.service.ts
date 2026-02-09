@@ -55,21 +55,24 @@ export class AuthService {
   }
 
   async login(data: LoginInput): Promise<AuthResponseDTO> {
-    const { email, password } = data;
+    const password = (data.password ?? "").trim();
+    const email = (data.email ?? "").trim().toLowerCase();
 
-    // Find user
+    // Find user (normalize email so Demo1@... matches demo1@...)
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
+      console.warn("[Auth] Login failed: user not found for email:", email);
       throw new AppError("Email not found. Please register first or check your email address", 401);
     }
 
-    // Verify password
+    // Verify password (compare trimmed input with stored hash)
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      console.warn("[Auth] Login failed: invalid password for email:", email);
       throw new AppError("Incorrect password. Please try again", 401);
     }
 

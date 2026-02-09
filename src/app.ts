@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { requestLogger } from "./middlewares/logger";
 import { errorHandler } from "./middlewares/errorHandler";
+import { authRateLimiter, apiRateLimiter } from "./middlewares/rateLimit";
 import healthRoutes from "./routes/health.routes";
 import traderRoutes from "./routes/trader.routes";
 import rewardsRoutes from "./modules/rewards/rewards.routes";
@@ -36,6 +37,11 @@ export const createApp = (): Express => {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(requestLogger);
+
+  // General API rate limit (all routes)
+  app.use(apiRateLimiter);
+  // Stricter rate limit for auth (login/register/logout)
+  app.use("/auth", authRateLimiter);
 
   app.use("/health", healthRoutes);
   app.use("/auth", authRoutes);
