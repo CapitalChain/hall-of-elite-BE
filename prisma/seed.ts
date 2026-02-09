@@ -1,7 +1,11 @@
 /**
  * Demo seed: 2 users with last 2 months of trades, achievements, and levels.
  * Deterministic so the same data is produced locally and on the server.
+ *
  * Run: npm run prisma:seed
+ *
+ * On the server: install deps on the server (do not copy node_modules from Mac/Windows),
+ * then run the seed. E.g. npm ci && npm run prisma:seed
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";

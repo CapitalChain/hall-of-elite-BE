@@ -18,18 +18,25 @@ import payoutRoutes from "./modules/payout/payout.routes";
 export const createApp = (): Express => {
   const app = express();
 
+  const hallOrigin = "https://hall.capitalchain.co";
   const allowedOrigins = [
-    env.CORS_ORIGIN,
-    ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
+    ...new Set([
+      env.CORS_ORIGIN,
+      ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
+      ...(env.NODE_ENV === "production" ? [hallOrigin, `${hallOrigin}/`] : []),
+    ].filter(Boolean)),
   ];
 
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/+$/, "");
+      const allowed =
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.includes(normalized) ||
+        allowedOrigins.includes(`${normalized}/`);
+      if (allowed) callback(null, true);
+      else callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
   }));
