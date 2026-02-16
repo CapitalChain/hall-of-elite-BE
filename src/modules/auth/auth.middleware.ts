@@ -13,17 +13,18 @@ declare global {
   }
 }
 
-/** Validate Bearer token with Capital Chain GET /authentication/user/ and return UserPayload */
+/** Validate token with Capital Chain GET /authentication/user/ and return UserPayload */
 async function validateCapitalChainToken(token: string): Promise<UserPayload | null> {
   const base = (env.AUTH_API_URL ?? "").trim().replace(/\/+$/, "");
   if (!base) return null;
+  const clean = token.trim().replace(/^(Token|Bearer)\s+/i, "");
   const url = `${base}/authentication/user/`;
   try {
     const res = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${token.trim().replace(/^(Token|Bearer)\s+/i, "")}`,
+        Authorization: `Token ${clean}`,
       },
     });
     if (!res.ok) return null;
@@ -41,36 +42,40 @@ async function validateCapitalChainToken(token: string): Promise<UserPayload | n
   }
 }
 
+function extractToken(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    if (authHeader.startsWith("Bearer ")) return authHeader.slice(7).trim();
+    if (authHeader.startsWith("Token ")) return authHeader.slice(6).trim();
+  }
+  return req.cookies?.token;
+}
+
 export const authMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    let token: string | undefined;
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.substring(7);
-    } else if (req.cookies?.token) {
-      token = req.cookies.token;
-    }
+    const token = extractToken(req);
 
     if (!token) {
       throw new AppError("Authentication required", 401);
     }
 
+    const rawToken = token.replace(/^(Token|Bearer)\s+/i, "").trim();
+
     // 1) Try our own JWT (Hall of Elite / demo users)
     try {
-      const payload = authService.verifyToken(token);
+      const payload = authService.verifyToken(rawToken);
       req.user = payload;
       return next();
     } catch {
       // Not our JWT, continue to Capital Chain
     }
 
-    // 2) Try Capital Chain token (GET /authentication/user/ with Bearer token)
-    const ccUser = await validateCapitalChainToken(token);
+    // 2) Try Capital Chain token (GET /authentication/user/ with Token header)
+    const ccUser = await validateCapitalChainToken(rawToken);
     if (ccUser) {
       req.user = ccUser;
       return next();

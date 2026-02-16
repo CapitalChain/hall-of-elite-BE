@@ -41,6 +41,7 @@ Optional:
 - `CORS_ORIGIN` (default `http://localhost:6100`)
 - `JWT_EXPIRES_IN` (default `7d`)
 - `NODE_ENV` (`development` | `production` | `test`)
+- `AUTH_API_URL` — **Set in production** when the frontend uses Capital Chain login (e.g. `https://capitalchain-c.tradetechsolutions.app`). Required so protected routes (`/user/progress`, `/user/analytics`, etc.) accept the Capital Chain token; otherwise dashboard calls return 401.
 
 ### Database: local vs production
 
