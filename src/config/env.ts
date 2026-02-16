@@ -30,6 +30,8 @@ const envSchema = z.object({
   RATE_LIMIT_AUTH_WINDOW_MS: z.string().optional(),
   RATE_LIMIT_API_MAX: z.string().optional(),
   RATE_LIMIT_API_WINDOW_MS: z.string().optional(),
+  /** Capital Chain auth API base URL (e.g. https://capitalchain-c.tradetechsolutions.app). If set, Bearer tokens can be validated via GET /authentication/user/ */
+  AUTH_API_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -53,4 +55,5 @@ export const env = envSchema.parse({
   RATE_LIMIT_AUTH_WINDOW_MS: process.env.RATE_LIMIT_AUTH_WINDOW_MS,
   RATE_LIMIT_API_MAX: process.env.RATE_LIMIT_API_MAX,
   RATE_LIMIT_API_WINDOW_MS: process.env.RATE_LIMIT_API_WINDOW_MS,
+  AUTH_API_URL: process.env.AUTH_API_URL,
 });
