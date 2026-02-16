@@ -23,7 +23,8 @@ export const createApp = (): Express => {
     ...new Set([
       env.CORS_ORIGIN,
       ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
-      ...(env.NODE_ENV === "production" ? [hallOrigin, `${hallOrigin}/`] : []),
+      hallOrigin,
+      `${hallOrigin}/`,
     ].filter(Boolean)),
   ];
 
@@ -35,10 +36,12 @@ export const createApp = (): Express => {
         allowedOrigins.includes(origin) ||
         allowedOrigins.includes(normalized) ||
         allowedOrigins.includes(`${normalized}/`);
-      if (allowed) callback(null, true);
+      if (allowed) callback(null, origin);
       else callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

@@ -63,3 +63,24 @@ npm run prisma:generate
 npm run prisma:migrate
 npm run dev
 ```
+
+## Deploying to production
+
+**You must run Prisma migrations on the production database** so tables (e.g. `User`, `TradingAccount`) exist. Without this, you will see:  
+`The table 'public.User' does not exist in the current database`.
+
+On the live server (e.g. `/home/bhallofelite/hall-of-elite-BE`), after setting `DATABASE_URL` in `.env` to the production PostgreSQL URL:
+
+```bash
+cd /home/bhallofelite/hall-of-elite-BE
+npm install
+# Use deploy (not "migrate dev") — no shadow DB, no CREATE DATABASE permission needed
+npm run prisma:migrate:deploy
+# If script is missing, run: npx prisma migrate deploy --schema=./src/prisma/schema.prisma
+npm run build
+npm run start
+```
+
+- **Use `prisma migrate deploy`**, not `prisma migrate dev`. `migrate dev` is for local use only (it creates a shadow database and needs "permission to create database").
+- `prisma migrate deploy` applies existing migrations and does **not** need CREATE DATABASE permission.
+- Optionally run `npm run prisma:seed` after migrations if you use a seed to create initial data.
