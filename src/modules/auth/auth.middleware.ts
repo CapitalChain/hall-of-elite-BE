@@ -23,7 +23,7 @@ async function validateCapitalChainToken(token: string): Promise<UserPayload | n
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Token ${token.trim().replace(/^(Token|Bearer)\s+/i, "")}`,
       },
     });
     if (!res.ok) return null;
