@@ -2,7 +2,8 @@ name: Deploy Hall of Elite Backend
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,48 +11,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # 1️⃣ Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
-
+      # 3️⃣ Install dependencies and build
       - name: Build project
-        run: npm run build
+        run: |
+          npm ci
+          npm run build
 
-      - name: Deploy files to server
-        uses: easingthemes/ssh-deploy@v4
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: bhallofelite
-          REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
-          SOURCE: "./"
-          TARGET: "/home/bhallofelite/hall-of-elite-BE/"
-          EXCLUDE: "node_modules/, .git/, .github/"
-
-      - name: Run production commands
+      # 4️⃣ Deploy and run production commands via SSH
+      - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: bhallofelite
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
           script: |
+            echo "📂 Navigating to backend folder..."
             cd /home/bhallofelite/hall-of-elite-BE
 
-            echo "Installing production dependencies..."
+            echo "🔄 Installing production dependencies..."
             npm ci --omit=dev
 
-            echo "Running Prisma migration..."
+            echo "🗄 Running Prisma migrations..."
             npx prisma migrate deploy --schema=./src/prisma/schema.prisma || true
 
-            echo "Restarting PM2..."
+            echo "🚀 Restarting PM2 process..."
             pm2 restart hall-of-elite-be || pm2 start dist/index.js --name hall-of-elite-be
 
             pm2 save
+
+            echo "✅ Backend deployment completed"
