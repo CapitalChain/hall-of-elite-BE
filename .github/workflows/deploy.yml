@@ -1,0 +1,57 @@
+name: Deploy Hall of Elite Backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy files to server
+        uses: easingthemes/ssh-deploy@v4
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: bhallofelite
+          REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+          SOURCE: "./"
+          TARGET: "/home/bhallofelite/hall-of-elite-BE/"
+          EXCLUDE: "node_modules/, .git/, .github/"
+
+      - name: Run production commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: bhallofelite
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/bhallofelite/hall-of-elite-BE
+
+            echo "Installing production dependencies..."
+            npm ci --omit=dev
+
+            echo "Running Prisma migration..."
+            npx prisma migrate deploy --schema=./src/prisma/schema.prisma || true
+
+            echo "Restarting PM2..."
+            pm2 restart hall-of-elite-be || pm2 start dist/index.js --name hall-of-elite-be
+
+            pm2 save

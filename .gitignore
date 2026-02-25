@@ -1,4 +1,4 @@
-# Dependencies
+# Dependencies (do not commit)
 node_modules/
 
 # Build
@@ -6,7 +6,10 @@ dist/
 
 # Environment (do not commit secrets)
 .env
+.env.*
 .env.local
+.env.production
+.env.development
 .env.*.local
 
 # Debug
