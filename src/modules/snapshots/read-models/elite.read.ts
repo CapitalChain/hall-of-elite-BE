@@ -16,6 +16,85 @@ export interface EliteListItem {
   readonly metrics: TraderSnapshotMetricsSummary;
 }
 
+const DEFAULT_BADGES: TraderSnapshotBadges = {
+  phoenixAddOn: false,
+  payoutBoost: false,
+  cashback: false,
+  merchandise: false,
+};
+
+const DEFAULT_METRICS: TraderSnapshotMetricsSummary = {
+  profitFactor: 0,
+  winRatePct: 0,
+  drawdownPct: 0,
+  tradingDays: 0,
+  totalTrades: 0,
+};
+
+const VALID_TIERS = new Set<string>(Object.values(TraderTier));
+
+function toTraderTier(tier: string | null): TraderTier {
+  if (tier && VALID_TIERS.has(tier)) return tier as TraderTier;
+  return TraderTier.BRONZE;
+}
+
+/**
+ * Fetch elite leaderboard from mt5_traders + mt5_trader_scores when no snapshot exists.
+ * Use this so DB data (cc-conclave) shows on /elite even before running the snapshot pipeline.
+ * Uses rank when set; otherwise orders by consistencyScore and assigns implicit rank.
+ */
+export const getEliteLeaderboardFromTraderScores = async (
+  limit = 100
+): Promise<EliteListItem[]> => {
+  const scores = await prisma.mt5TraderScore.findMany({
+    take: limit * 2,
+    include: { trader: true },
+  });
+
+  if (scores.length === 0) return [];
+
+  // Prefer rank when set; else sort by consistencyScore and assign rank 1,2,3...
+  const withRank = scores.filter((s) => s.rank != null).sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+  const withoutRank = scores.filter((s) => s.rank == null).sort((a, b) => b.consistencyScore - a.consistencyScore);
+  const ordered = withRank.length > 0 ? withRank : withoutRank;
+  const takeScores = ordered.slice(0, limit);
+
+  const metricsByTraderId = new Map<string, { profitFactor: number; winRate: number; drawdown: number; totalTradingDays: number }>();
+  const metricsRows = await prisma.mt5TraderMetrics.findMany({
+    where: { traderId: { in: takeScores.map((s) => s.traderId) } },
+  });
+  metricsRows.forEach((m) => {
+    metricsByTraderId.set(m.traderId, {
+      profitFactor: m.profitFactor,
+      winRate: m.winRate,
+      drawdown: m.drawdown,
+      totalTradingDays: m.totalTradingDays,
+    });
+  });
+
+  return takeScores.map((row, index) => {
+    const metrics = metricsByTraderId.get(row.traderId);
+    return {
+      traderId: row.traderId,
+      externalTraderId: row.trader.externalId,
+      displayName: row.trader.name,
+      score: row.consistencyScore,
+      rank: row.rank ?? index + 1,
+      tier: toTraderTier(row.tier),
+      badges: DEFAULT_BADGES,
+      metrics: metrics
+        ? {
+            profitFactor: metrics.profitFactor,
+            winRatePct: metrics.winRate * 100,
+            drawdownPct: metrics.drawdown * 100,
+            tradingDays: metrics.totalTradingDays,
+            totalTrades: 0,
+          }
+        : DEFAULT_METRICS,
+    };
+  });
+};
+
 /**
  * Fetch elite leaderboard data from the latest snapshot run.
  * Read-only, snapshot-based view for the /elite page.
@@ -60,4 +139,13 @@ export const getEliteLeaderboardFromLatestSnapshot = async (
     badges: row.badges as unknown as TraderSnapshotBadges,
     metrics: row.metrics as unknown as TraderSnapshotMetricsSummary,
   }));
+};
+
+/**
+ * Get elite leaderboard: snapshot first, then mt5_trader_scores, so DB data always shows.
+ */
+export const getEliteLeaderboard = async (limit = 100): Promise<EliteListItem[]> => {
+  const fromSnapshot = await getEliteLeaderboardFromLatestSnapshot(limit);
+  if (fromSnapshot.length > 0) return fromSnapshot;
+  return getEliteLeaderboardFromTraderScores(limit);
 };

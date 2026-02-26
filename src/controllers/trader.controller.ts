@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { TraderService } from "../services/trader.service";
 import { TraderTier } from "../types";
 import type { TraderProfile } from "../types";
-import { getEliteLeaderboardFromLatestSnapshot } from "../modules/snapshots/read-models/elite.read";
+import { getEliteLeaderboard } from "../modules/snapshots/read-models/elite.read";
 import { getTraderProfileFromLatestSnapshot } from "../modules/snapshots/read-models/traderProfile.read";
 
 const traderService = new TraderService();
@@ -54,11 +54,11 @@ export const getAllTraders = async (req: Request, res: Response, next: NextFunct
     const limit = Math.min(Number(req.query.limit) || 10, 100);
     const tier = req.query.tier as string | undefined;
 
-    let list: Awaited<ReturnType<typeof getEliteLeaderboardFromLatestSnapshot>> = [];
+    let list: Awaited<ReturnType<typeof getEliteLeaderboard>> = [];
     try {
-      list = await getEliteLeaderboardFromLatestSnapshot(limit * 10);
+      list = await getEliteLeaderboard(limit * 10);
     } catch {
-      // Snapshot tables may not exist or DB error; fall back to mock
+      // Snapshot/score tables may not exist or DB error; fall back to mock
     }
 
     if (list.length > 0) {
