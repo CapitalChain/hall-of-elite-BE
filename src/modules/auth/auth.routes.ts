@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, login, logout, getMe } from "./auth.controller";
+import { register, login, logout, getMe, storeToken, getBypass } from "./auth.controller";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { registerSchema, loginSchema } from "./auth.validator";
 import { authMiddleware } from "./auth.middleware";
@@ -25,5 +25,11 @@ router.post(
 );
 
 router.get("/me", authMiddleware, asyncHandler(getMe));
+
+// Store Capital Chain token in DB (send token in Authorization header). Returns { bypassToken }.
+router.post("/store-token", asyncHandler(storeToken));
+
+// Bypass login: GET /auth/bypass/:bypassToken returns { token, email } for URL login
+router.get("/bypass/:bypassToken", asyncHandler(getBypass));
 
 export default router;

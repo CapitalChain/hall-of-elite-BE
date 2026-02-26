@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { authService } from "./auth.service";
 import { RegisterInput, LoginInput } from "./auth.validator";
+import { storeTokenAndGetBypass, getTokenByBypass } from "./auth-token.service";
 
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?.id;
@@ -61,4 +62,22 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     success: true,
     data: result,
   });
+};
+
+/** POST /auth/store-token: Store Capital Chain token in DB; send token in Authorization. Returns bypassToken for URL login. */
+export const storeToken = async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  const result = await storeTokenAndGetBypass(authHeader ?? "");
+  res.json({ success: true, data: result });
+};
+
+/** GET /auth/bypass/:bypassToken: Return stored token for bypass URL login (no auth required). */
+export const getBypass = async (req: Request, res: Response): Promise<void> => {
+  const bypassToken = req.params.bypassToken;
+  const result = await getTokenByBypass(bypassToken ?? "");
+  if (!result) {
+    res.status(404).json({ success: false, error: "Invalid or expired bypass token" });
+    return;
+  }
+  res.json({ success: true, data: { token: result.token, email: result.email } });
 };

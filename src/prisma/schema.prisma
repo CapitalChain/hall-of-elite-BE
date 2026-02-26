@@ -268,3 +268,18 @@ model TraderPayout {
   @@index([payoutPercent])
   @@map("trader_payouts")
 }
+
+// Store Capital Chain token + optional bypass token for URL login
+model StoredAuthToken {
+  id          String   @id @default(uuid())
+  ccUserId    String
+  email       String
+  token       String
+  bypassToken String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ccUserId])
+  @@index([email])
+  @@map("auth_tokens")
+}

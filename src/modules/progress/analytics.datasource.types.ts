@@ -29,6 +29,10 @@ export interface ClosedTradeRow {
   profitLoss: number;
   fees: number;
   closeTime: Date;
+  /** Volume (lots); optional for backward compat. */
+  volume?: number;
+  /** Open time for duration calc; optional for backward compat. */
+  openTime?: Date;
 }
 
 /**
