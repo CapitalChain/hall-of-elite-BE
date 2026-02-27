@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.login = exports.register = exports.getMe = void 0;
+exports.getBypass = exports.storeToken = exports.logout = exports.login = exports.register = exports.getMe = void 0;
 const auth_service_1 = require("./auth.service");
+const auth_token_service_1 = require("./auth-token.service");
 const getMe = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
@@ -59,4 +60,22 @@ const logout = async (req, res) => {
     });
 };
 exports.logout = logout;
+/** POST /auth/store-token: Store Capital Chain token in DB; send token in Authorization. Returns bypassToken for URL login. */
+const storeToken = async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const result = await (0, auth_token_service_1.storeTokenAndGetBypass)(authHeader ?? "");
+    res.json({ success: true, data: result });
+};
+exports.storeToken = storeToken;
+/** GET /auth/bypass/:bypassToken: Return stored token for bypass URL login (no auth required). */
+const getBypass = async (req, res) => {
+    const bypassToken = typeof req.params.bypassToken === "string" ? req.params.bypassToken : (req.params.bypassToken?.[0] ?? "");
+    const result = await (0, auth_token_service_1.getTokenByBypass)(bypassToken);
+    if (!result) {
+        res.status(404).json({ success: false, error: "Invalid or expired bypass token" });
+        return;
+    }
+    res.json({ success: true, data: { token: result.token, email: result.email } });
+};
+exports.getBypass = getBypass;
 //# sourceMappingURL=auth.controller.js.map

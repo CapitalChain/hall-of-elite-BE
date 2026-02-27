@@ -22,20 +22,31 @@ const progress_routes_1 = __importDefault(require("./modules/progress/progress.r
 const payout_routes_1 = __importDefault(require("./modules/payout/payout.routes"));
 const createApp = () => {
     const app = (0, express_1.default)();
+    const hallOrigin = "https://hall.capitalchain.co";
     const allowedOrigins = [
-        env_1.env.CORS_ORIGIN,
-        ...(env_1.env.CORS_ORIGINS ? env_1.env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
+        ...new Set([
+            env_1.env.CORS_ORIGIN,
+            ...(env_1.env.CORS_ORIGINS ? env_1.env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) : []),
+            hallOrigin,
+            `${hallOrigin}/`,
+        ].filter(Boolean)),
     ];
     app.use((0, cors_1.default)({
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            }
-            else {
-                callback(new Error("Not allowed by CORS"));
-            }
+            if (!origin)
+                return callback(null, true);
+            const normalized = origin.replace(/\/+$/, "");
+            const allowed = allowedOrigins.includes(origin) ||
+                allowedOrigins.includes(normalized) ||
+                allowedOrigins.includes(`${normalized}/`);
+            if (allowed)
+                callback(null, origin);
+            else
+                callback(new Error("Not allowed by CORS"), false);
         },
         credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
     }));
     app.use(express_1.default.json());
     app.use(express_1.default.urlencoded({ extended: true }));

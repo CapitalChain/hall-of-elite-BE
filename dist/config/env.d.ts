@@ -19,6 +19,8 @@ declare const envSchema: z.ZodObject<{
     RATE_LIMIT_AUTH_WINDOW_MS: z.ZodOptional<z.ZodString>;
     RATE_LIMIT_API_MAX: z.ZodOptional<z.ZodString>;
     RATE_LIMIT_API_WINDOW_MS: z.ZodOptional<z.ZodString>;
+    /** Capital Chain auth API base URL (e.g. https://capitalchain-c.tradetechsolutions.app). If set, Bearer tokens can be validated via GET /authentication/user/ */
+    AUTH_API_URL: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     NODE_ENV: "development" | "production" | "test";
     PORT: string;
@@ -38,6 +40,7 @@ declare const envSchema: z.ZodObject<{
     RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
     RATE_LIMIT_API_MAX?: string | undefined;
     RATE_LIMIT_API_WINDOW_MS?: string | undefined;
+    AUTH_API_URL?: string | undefined;
 }, {
     DATABASE_URL: string;
     JWT_SECRET: string;
@@ -57,6 +60,7 @@ declare const envSchema: z.ZodObject<{
     RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
     RATE_LIMIT_API_MAX?: string | undefined;
     RATE_LIMIT_API_WINDOW_MS?: string | undefined;
+    AUTH_API_URL?: string | undefined;
 }>;
 export type Env = z.infer<typeof envSchema>;
 export declare const env: {
@@ -78,6 +82,7 @@ export declare const env: {
     RATE_LIMIT_AUTH_WINDOW_MS?: string | undefined;
     RATE_LIMIT_API_MAX?: string | undefined;
     RATE_LIMIT_API_WINDOW_MS?: string | undefined;
+    AUTH_API_URL?: string | undefined;
 };
 export {};
 //# sourceMappingURL=env.d.ts.map

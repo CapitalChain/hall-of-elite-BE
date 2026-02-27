@@ -73,8 +73,8 @@ export const storeToken = async (req: Request, res: Response): Promise<void> => 
 
 /** GET /auth/bypass/:bypassToken: Return stored token for bypass URL login (no auth required). */
 export const getBypass = async (req: Request, res: Response): Promise<void> => {
-  const bypassToken = req.params.bypassToken;
-  const result = await getTokenByBypass(bypassToken ?? "");
+  const bypassToken = typeof req.params.bypassToken === "string" ? req.params.bypassToken : (req.params.bypassToken?.[0] ?? "");
+  const result = await getTokenByBypass(bypassToken);
   if (!result) {
     res.status(404).json({ success: false, error: "Invalid or expired bypass token" });
     return;

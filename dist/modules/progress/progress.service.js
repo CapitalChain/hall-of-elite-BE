@@ -104,6 +104,23 @@ async function getTradeAnalyticsForUser(userId, options) {
         closeTime: t.closeTime.toISOString(),
         netPnl: t.profitLoss - t.fees,
     }));
+    let avgTradeSize = 0;
+    let avgTradeDuration = "0m";
+    if (closedTrades.length > 0) {
+        const withVolume = closedTrades.filter((t) => t.volume != null);
+        avgTradeSize = withVolume.length > 0
+            ? withVolume.reduce((s, t) => s + (t.volume ?? 0), 0) / withVolume.length
+            : 0;
+        const withOpen = closedTrades.filter((t) => t.openTime != null && t.closeTime != null);
+        if (withOpen.length > 0) {
+            const totalMs = withOpen.reduce((s, t) => s + (t.closeTime.getTime() - (t.openTime?.getTime() ?? t.closeTime.getTime())), 0);
+            const avgMs = totalMs / withOpen.length;
+            const h = Math.floor(avgMs / 3600000);
+            const m = Math.floor((avgMs % 3600000) / 60000);
+            const sec = Math.floor((avgMs % 60000) / 1000);
+            avgTradeDuration = h > 0 ? `${h}h:${m}m:${sec}s` : m > 0 ? `${m}m:${sec}s` : `${sec}s`;
+        }
+    }
     let pathToNextTier = null;
     if (payout?.payoutPercent !== undefined && payout?.payoutPercent !== null) {
         if (payout.payoutPercent <= 30)
@@ -124,6 +141,8 @@ async function getTradeAnalyticsForUser(userId, options) {
         tradesLastWeek,
         pathToNextTier,
         recentTrades,
+        avgTradeSize,
+        avgTradeDuration,
     };
 }
 /**

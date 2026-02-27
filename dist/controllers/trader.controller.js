@@ -51,10 +51,10 @@ const getAllTraders = async (req, res, next) => {
         const tier = req.query.tier;
         let list = [];
         try {
-            list = await (0, elite_read_1.getEliteLeaderboardFromLatestSnapshot)(limit * 10);
+            list = await (0, elite_read_1.getEliteLeaderboard)(limit * 10);
         }
         catch {
-            // Snapshot tables may not exist or DB error; fall back to mock
+            // Snapshot/score tables may not exist or DB error; fall back to mock
         }
         if (list.length > 0) {
             const traders = list.map((item, index) => ({

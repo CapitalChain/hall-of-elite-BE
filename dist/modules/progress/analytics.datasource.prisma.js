@@ -53,7 +53,7 @@ exports.tradeAnalyticsDataSource = {
         };
         const trades = await client_1.prisma.mt5Trade.findMany({
             where,
-            select: { id: true, symbol: true, profitLoss: true, fees: true, closeTime: true },
+            select: { id: true, symbol: true, profitLoss: true, fees: true, closeTime: true, volume: true, openTime: true },
             orderBy: { closeTime: "asc" },
             ...(options?.limit != null && { take: options.limit }),
         });
@@ -63,6 +63,8 @@ exports.tradeAnalyticsDataSource = {
             profitLoss: t.profitLoss,
             fees: t.fees,
             closeTime: t.closeTime,
+            volume: t.volume,
+            openTime: t.openTime,
         }));
     },
 };

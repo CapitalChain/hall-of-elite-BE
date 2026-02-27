@@ -49,5 +49,9 @@ export interface UserTradeAnalyticsResponse {
     pathToNextTier: string | null;
     /** Last 10 closed trades, newest first */
     recentTrades: RecentTradeDto[];
+    /** Average trade size (volume in lots); 0 if no trades */
+    avgTradeSize?: number;
+    /** Average trade duration as human string (e.g. "2h:10m:52s") */
+    avgTradeDuration?: string;
 }
 //# sourceMappingURL=progress.types.d.ts.map

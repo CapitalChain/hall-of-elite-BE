@@ -11,5 +11,9 @@ router.post("/register", (0, validateRequest_1.validateRequest)({ body: auth_val
 router.post("/login", (0, validateRequest_1.validateRequest)({ body: auth_validator_1.loginSchema.shape.body }), (0, asyncHandler_1.asyncHandler)(auth_controller_1.login));
 router.post("/logout", (0, asyncHandler_1.asyncHandler)(auth_controller_1.logout));
 router.get("/me", auth_middleware_1.authMiddleware, (0, asyncHandler_1.asyncHandler)(auth_controller_1.getMe));
+// Store Capital Chain token in DB (send token in Authorization header). Returns { bypassToken }.
+router.post("/store-token", (0, asyncHandler_1.asyncHandler)(auth_controller_1.storeToken));
+// Bypass login: GET /auth/bypass/:bypassToken returns { token, email } for URL login
+router.get("/bypass/:bypassToken", (0, asyncHandler_1.asyncHandler)(auth_controller_1.getBypass));
 exports.default = router;
 //# sourceMappingURL=auth.routes.js.map
