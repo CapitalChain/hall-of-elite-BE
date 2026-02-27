@@ -12,6 +12,7 @@ import { tradeAnalyticsDataSource } from "./analytics.datasource.prisma";
 /**
  * Resolve MT5 trader ID for the current user (Capital Chain user id).
  * Uses auth_tokens.mt5TraderId when set; otherwise returns null.
+ * Safe when mt5TraderId column is missing (migration not run yet): returns null on any error.
  */
 export async function resolveMt5TraderIdForUser(ccUserId: string): Promise<string | null> {
   try {
@@ -172,51 +173,73 @@ function computePointsFromPayout(payoutPercent: number | null, totalTradingDays:
   return Math.round(base + activityBonus);
 }
 
-/**
- * Get dashboard progress for the authenticated user: current POINTS (from payout),
- * next reward threshold in points, and which targets are unlocked.
- * Points are increased based on payout tier (30/80/95) and trading days.
- */
-export async function getProgressForUser(userId: string): Promise<UserProgressResponse> {
-  const traderId = await resolveMt5TraderIdForUser(userId);
-  let currentPoints = 0;
-
-  if (traderId) {
-    try {
-      const metrics = await prisma.mt5TraderMetrics.findUnique({
-        where: { traderId },
-        select: { totalTradingDays: true },
-      });
-      const totalTradingDays = metrics?.totalTradingDays ?? 0;
-      currentPoints = computePointsFromPayout(null, totalTradingDays);
-    } catch {
-      // mt5_trader_metrics may be missing; keep currentPoints 0
-    }
-  }
-
-  const pointsToReturn = Math.max(currentPoints, MIN_POINTS_START);
-
+function getDefaultProgressResponse(): UserProgressResponse {
+  const pointsToReturn = MIN_POINTS_START;
   const rewardTargets: RewardTargetProgress[] = REWARD_TARGET_THRESHOLDS.map((requiredPoints, index) => {
     const id = index + 1;
     const unlocked = pointsToReturn >= requiredPoints;
-    const canUnlock = unlocked;
     return {
       id,
       label: id === 1 ? "Unlocked" : `Target ${id}`,
       unlocked,
-      canUnlock,
+      canUnlock: unlocked,
       requiredPoints,
       requiredLevel: requiredPoints,
     };
   });
-
   const firstLocked = rewardTargets.find((t) => !t.unlocked);
-  const nextRewardThreshold = firstLocked?.requiredPoints ?? 100;
-
   return {
     currentPoints: pointsToReturn,
-    nextRewardThreshold,
+    nextRewardThreshold: firstLocked?.requiredPoints ?? 100,
     rewardTargets,
     currentLevel: pointsToReturn,
   };
+}
+
+/**
+ * Get dashboard progress for the authenticated user: current POINTS (from payout),
+ * next reward threshold in points, and which targets are unlocked.
+ * Never throws: returns default progress on any DB/error.
+ */
+export async function getProgressForUser(userId: string): Promise<UserProgressResponse> {
+  try {
+    const traderId = await resolveMt5TraderIdForUser(userId);
+    let currentPoints = 0;
+
+    if (traderId) {
+      try {
+        const metrics = await prisma.mt5TraderMetrics.findUnique({
+          where: { traderId },
+          select: { totalTradingDays: true },
+        });
+        const totalTradingDays = metrics?.totalTradingDays ?? 0;
+        currentPoints = computePointsFromPayout(null, totalTradingDays);
+      } catch {
+        // mt5_trader_metrics may be missing; keep currentPoints 0
+      }
+    }
+
+    const pointsToReturn = Math.max(currentPoints, MIN_POINTS_START);
+    const rewardTargets: RewardTargetProgress[] = REWARD_TARGET_THRESHOLDS.map((requiredPoints, index) => {
+      const id = index + 1;
+      const unlocked = pointsToReturn >= requiredPoints;
+      return {
+        id,
+        label: id === 1 ? "Unlocked" : `Target ${id}`,
+        unlocked,
+        canUnlock: unlocked,
+        requiredPoints,
+        requiredLevel: requiredPoints,
+      };
+    });
+    const firstLocked = rewardTargets.find((t) => !t.unlocked);
+    return {
+      currentPoints: pointsToReturn,
+      nextRewardThreshold: firstLocked?.requiredPoints ?? 100,
+      rewardTargets,
+      currentLevel: pointsToReturn,
+    };
+  } catch {
+    return getDefaultProgressResponse();
+  }
 }

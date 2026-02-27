@@ -26,18 +26,20 @@ function getDefaultProgress() {
   };
 }
 
-export async function getUserProgress(req: Request, res: Response, next: NextFunction): Promise<void> {
+/** GET /user/progress – always returns 200 with progress (default if any error). Never throws. */
+export async function getUserProgress(req: Request, res: Response, _next: NextFunction): Promise<void> {
   try {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ success: false, error: "Authentication required" });
       return;
     }
-
     const progress = await getProgressForUser(userId);
     res.json({ success: true, data: progress });
-  } catch (error) {
-    res.status(200).json({ success: true, data: getDefaultProgress() });
+  } catch {
+    if (!res.headersSent) {
+      res.status(200).json({ success: true, data: getDefaultProgress() });
+    }
   }
 }
 
