@@ -37,8 +37,12 @@ function generateBypassToken(): string {
 /**
  * Validate token with Capital Chain, store it in DB, and return a bypass token.
  * Call this after the user has logged in via Capital Chain (send their token in Authorization).
+ * Optional mt5TraderId links this user to mt5_traders.id for dashboard data.
  */
-export async function storeTokenAndGetBypass(authHeader: string): Promise<{ bypassToken: string }> {
+export async function storeTokenAndGetBypass(
+  authHeader: string,
+  mt5TraderId?: string | null
+): Promise<{ bypassToken: string }> {
   const raw = authHeader?.replace(/^(Token|Bearer)\s+/i, "").trim();
   if (!raw) throw new AppError("Authorization token required", 401);
 
@@ -46,6 +50,14 @@ export async function storeTokenAndGetBypass(authHeader: string): Promise<{ bypa
   if (!ccUser) throw new AppError("Invalid token: could not validate with Capital Chain", 401);
 
   const bypassToken = generateBypassToken();
+  const data: { token: string; bypassToken: string; email: string; mt5TraderId?: string } = {
+    token: raw,
+    bypassToken,
+    email: ccUser.email,
+  };
+  if (mt5TraderId != null && mt5TraderId.trim() !== "") {
+    data.mt5TraderId = mt5TraderId.trim();
+  }
 
   const existing = await prisma.storedAuthToken.findFirst({
     where: { ccUserId: ccUser.id },
@@ -54,15 +66,13 @@ export async function storeTokenAndGetBypass(authHeader: string): Promise<{ bypa
   if (existing) {
     await prisma.storedAuthToken.update({
       where: { id: existing.id },
-      data: { token: raw, bypassToken, email: ccUser.email, updatedAt: new Date() },
+      data: { ...data, updatedAt: new Date() },
     });
   } else {
     await prisma.storedAuthToken.create({
       data: {
         ccUserId: ccUser.id,
-        email: ccUser.email,
-        token: raw,
-        bypassToken,
+        ...data,
       },
     });
   }

@@ -270,16 +270,19 @@ model TraderPayout {
 }
 
 // Store Capital Chain token + optional bypass token for URL login
+// mt5TraderId links this user to mt5_traders.id for dashboard/analytics
 model StoredAuthToken {
-  id          String   @id @default(uuid())
-  ccUserId    String
-  email       String
-  token       String
-  bypassToken String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  ccUserId     String
+  email        String
+  token        String
+  bypassToken  String?  @unique
+  mt5TraderId  String?  // mt5_traders.id – set when user is linked to an MT5 trader
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([ccUserId])
   @@index([email])
+  @@index([mt5TraderId])
   @@map("auth_tokens")
 }

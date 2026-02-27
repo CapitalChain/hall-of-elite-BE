@@ -4,58 +4,21 @@ import { RewardEligibilityDTO } from "./rewards.dto";
 import { TIER_REWARDS_MAP } from "./tier-rewards.config";
 
 export class RewardsService {
+  /**
+   * Get reward eligibility from current DB tables only: mt5_trader_scores.
+   * Reward entitlements table was dropped; use tier-based TIER_REWARDS_MAP only.
+   */
   async getRewardEligibility(traderId: string): Promise<RewardEligibilityDTO | null> {
     try {
-      // Resolve tier: prefer Mt5TraderScore (by traderId), fallback to TraderScore (by tradingAccountId)
-      let tier: TraderTier | null = null;
-
       const mt5Score = await prisma.mt5TraderScore.findUnique({
         where: { traderId },
       });
-      if (mt5Score?.tier) {
-        tier = mt5Score.tier as TraderTier;
-      }
-
-      if (tier == null) {
-        const traderScore = await prisma.traderScore.findUnique({
-          where: { tradingAccountId: traderId },
-        });
-        if (traderScore?.tier) {
-          tier = traderScore.tier as TraderTier;
-        }
-      }
-
-      if (tier == null) {
-        return null;
-      }
-
+      const tier: TraderTier = (mt5Score?.tier as TraderTier) ?? TraderTier.BRONZE;
       const baseRewards = TIER_REWARDS_MAP[tier] ?? TIER_REWARDS_MAP[TraderTier.BRONZE];
-
-      const rewardEntitlements = await prisma.rewardEntitlement.findMany({
-        where: {
-          traderId,
-          status: "PENDING",
-        },
-      });
-
-      const rewards: RewardEligibilityDTO["rewards"] = {
-        phoenixAddOn: baseRewards.phoenixAddOn || rewardEntitlements.some(
-          (r) => r.rewardType === "BONUS"
-        ),
-        payoutBoost: baseRewards.payoutBoost || rewardEntitlements.some(
-          (r) => r.rewardType === "BONUS"
-        ),
-        cashback: baseRewards.cashback || rewardEntitlements.some(
-          (r) => r.rewardType === "CASH"
-        ),
-        merchandise: baseRewards.merchandise || rewardEntitlements.some(
-          (r) => r.rewardType === "MERCHANDISE"
-        ),
-      };
 
       return {
         traderId,
-        rewards,
+        rewards: { ...baseRewards },
       };
     } catch (error) {
       console.error("Error fetching reward eligibility:", error);

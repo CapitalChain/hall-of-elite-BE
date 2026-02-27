@@ -17,43 +17,37 @@ export interface TraderProfileSnapshot {
 }
 
 /**
- * Read model for /elite/[id] – returns the latest snapshot view
- * for a specific trader, if available.
+ * Read model for /elite/[id] – snapshot tables (snapshot_runs, trader_snapshots) were dropped.
+ * Returns null so trader controller uses MT5 tables (getTraderProfile from mt5_traders/scores/metrics).
  */
 export const getTraderProfileFromLatestSnapshot = async (
-  traderId: string
+  _traderId: string
 ): Promise<TraderProfileSnapshot | null> => {
-  const latestRun = await prisma.snapshotRun.findFirst({
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const latestRun = await prisma.snapshotRun.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+    if (!latestRun) return null;
 
-  if (!latestRun) {
+    const row = await prisma.traderSnapshot.findFirst({
+      where: { snapshotId: latestRun.id, traderId: _traderId },
+    });
+    if (!row) return null;
+
+    const trader = await prisma.mt5Trader.findUnique({
+      where: { id: _traderId },
+    });
+    return {
+      traderId: row.traderId,
+      externalTraderId: row.externalTraderId,
+      displayName: trader?.name ?? row.externalTraderId,
+      score: row.score,
+      rank: row.rank,
+      tier: row.tier as TraderTier,
+      badges: row.badges as unknown as TraderSnapshotBadges,
+      metrics: row.metrics as unknown as TraderSnapshotMetricsSummary,
+    };
+  } catch {
     return null;
   }
-
-  const row = await prisma.traderSnapshot.findFirst({
-    where: {
-      snapshotId: latestRun.id,
-      traderId,
-    },
-  });
-
-  if (!row) {
-    return null;
-  }
-
-  const trader = await prisma.mt5Trader.findUnique({
-    where: { id: traderId },
-  });
-
-  return {
-    traderId: row.traderId,
-    externalTraderId: row.externalTraderId,
-    displayName: trader?.name ?? row.externalTraderId,
-    score: row.score,
-    rank: row.rank,
-    tier: row.tier as TraderTier,
-    badges: row.badges as unknown as TraderSnapshotBadges,
-    metrics: row.metrics as unknown as TraderSnapshotMetricsSummary,
-  };
 };

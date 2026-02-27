@@ -4,47 +4,36 @@ import { TierConfigDTO, RewardConfigDTO } from "./admin.dto";
 import { staticTierConfig, staticRewardConfig } from "./config";
 
 export class AdminService {
+  /** Tier table was dropped; use static config only. */
   async getTierConfigs(): Promise<TierConfigDTO[]> {
     try {
-      const tiers = await prisma.tier.findMany({
-        orderBy: { minScore: "asc" },
-      });
-
+      const tiers = await prisma.tier.findMany({ orderBy: { minScore: "asc" } });
       if (tiers.length > 0) {
-        return tiers.map((tier) => ({
-          tierId: tier.id,
-          name: tier.name,
-          minScore: tier.minScore,
-          maxScore: tier.maxScore ?? undefined,
-          badge: tier.name,
-          color: tier.color ?? undefined,
-          icon: tier.icon ?? undefined,
-          description: tier.description ?? undefined,
+        return tiers.map((t) => ({
+          tierId: t.id,
+          name: t.name,
+          minScore: t.minScore,
+          maxScore: t.maxScore ?? undefined,
+          badge: t.name,
+          color: t.color ?? undefined,
+          icon: t.icon ?? undefined,
+          description: t.description ?? undefined,
         }));
       }
-
-      return this.getStaticTierConfigs();
-    } catch (error) {
-      console.error("Error fetching tier configs from database:", error);
-      return this.getStaticTierConfigs();
+    } catch {
+      // tier table dropped
     }
+    return this.getStaticTierConfigs();
   }
 
+  /** Reward table was dropped; use static config only. */
   async getRewardConfigs(): Promise<RewardConfigDTO[]> {
     try {
-      const rewards = await prisma.reward.findMany({
-        include: {
-          entitlements: true,
-        },
-      });
-
+      const rewards = await prisma.reward.findMany({ include: { entitlements: true } });
       if (rewards.length > 0) {
         const tierRewardMap = new Map<string, RewardConfigDTO>();
-
         rewards.forEach((reward) => {
           const tierName = reward.tier;
-          const tierKey = tierName.toUpperCase() as TraderTier;
-
           if (!tierRewardMap.has(tierName)) {
             tierRewardMap.set(tierName, {
               tierId: tierName,
@@ -55,16 +44,11 @@ export class AdminService {
               merchandise: false,
             });
           }
-
           const config = tierRewardMap.get(tierName)!;
-
           switch (reward.rewardType.toUpperCase()) {
             case "BONUS":
-              if (reward.name.toLowerCase().includes("phoenix")) {
-                config.phoenixAddOn = reward.isActive;
-              } else {
-                config.payoutBoost = reward.isActive;
-              }
+              config.phoenixAddOn = reward.name.toLowerCase().includes("phoenix") ? reward.isActive : config.phoenixAddOn;
+              config.payoutBoost = !reward.name.toLowerCase().includes("phoenix") ? reward.isActive : config.payoutBoost;
               break;
             case "CASH":
               config.cashback = reward.isActive;
@@ -74,23 +58,18 @@ export class AdminService {
               break;
           }
         });
-
         return Array.from(tierRewardMap.values());
       }
-
-      return this.getStaticRewardConfigs();
-    } catch (error) {
-      console.error("Error fetching reward configs from database:", error);
-      return this.getStaticRewardConfigs();
+    } catch {
+      // reward table dropped
     }
+    return this.getStaticRewardConfigs();
   }
 
+  /** Tier table was dropped; use static config only. */
   async getTierConfigById(tierId: string): Promise<TierConfigDTO | null> {
     try {
-      const tier = await prisma.tier.findUnique({
-        where: { id: tierId },
-      });
-
+      const tier = await prisma.tier.findUnique({ where: { id: tierId } });
       if (tier) {
         return {
           tierId: tier.id,
@@ -103,12 +82,10 @@ export class AdminService {
           description: tier.description ?? undefined,
         };
       }
-
-      return this.getStaticTierConfigById(tierId);
-    } catch (error) {
-      console.error("Error fetching tier config by ID:", error);
-      return this.getStaticTierConfigById(tierId);
+    } catch {
+      // tier table dropped
     }
+    return this.getStaticTierConfigById(tierId);
   }
 
   private getStaticTierConfigs(): TierConfigDTO[] {

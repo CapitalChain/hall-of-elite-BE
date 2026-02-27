@@ -3,15 +3,11 @@ import { authService } from "./auth.service";
 import { RegisterInput, LoginInput } from "./auth.validator";
 import { storeTokenAndGetBypass, getTokenByBypass } from "./auth-token.service";
 
+/** GET /auth/me – use token payload only (no User table). Capital Chain users have id, email, role from token. */
 export const getMe = async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user?.id;
-  if (!userId) {
+  const user = req.user;
+  if (!user?.id) {
     res.status(401).json({ success: false, error: "Authentication required" });
-    return;
-  }
-  const user = await authService.getUserById(userId);
-  if (!user) {
-    res.status(404).json({ success: false, error: "User not found" });
     return;
   }
   res.json({
@@ -19,8 +15,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     data: {
       id: user.id,
       email: user.email,
-      displayName: user.displayName,
-      role: user.role,
+      displayName: user.email ?? "User",
+      role: user.role ?? "TRADER",
     },
   });
 };
@@ -64,10 +60,11 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
-/** POST /auth/store-token: Store Capital Chain token in DB; send token in Authorization. Returns bypassToken for URL login. */
+/** POST /auth/store-token: Store Capital Chain token in DB; send token in Authorization. Body: { mt5TraderId? }. Returns bypassToken for URL login. */
 export const storeToken = async (req: Request, res: Response): Promise<void> => {
   const authHeader = req.headers.authorization;
-  const result = await storeTokenAndGetBypass(authHeader ?? "");
+  const mt5TraderId = (req.body as { mt5TraderId?: string })?.mt5TraderId;
+  const result = await storeTokenAndGetBypass(authHeader ?? "", mt5TraderId);
   res.json({ success: true, data: result });
 };
 

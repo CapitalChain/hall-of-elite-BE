@@ -1,6 +1,4 @@
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { prisma } from "../../config/database";
 import { env } from "../../config/env";
 import { RegisterInput, LoginInput } from "./auth.validator";
 import { AuthResponseDTO, UserPayload } from "./auth.dto";
@@ -9,90 +7,14 @@ import { AppError } from "../../middlewares/errorHandler";
 export class AuthService {
   private readonly SALT_ROUNDS = 10;
 
-  async register(data: RegisterInput): Promise<AuthResponseDTO> {
-    const { email, password, displayName } = data;
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      throw new AppError("User with this email already exists", 409);
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, this.SALT_ROUNDS);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        displayName,
-        role: "TRADER",
-      },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        role: true,
-      },
-    });
-
-    // Generate JWT token
-    const token = this.generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    return {
-      success: true,
-      user,
-      token,
-    };
+  /** Registration disabled – use Capital Chain login and POST /auth/store-token. */
+  async register(_data: RegisterInput): Promise<AuthResponseDTO> {
+    throw new AppError("Registration is disabled. Please use Capital Chain login.", 501);
   }
 
-  async login(data: LoginInput): Promise<AuthResponseDTO> {
-    const password = (data.password ?? "").trim();
-    const email = (data.email ?? "").trim().toLowerCase();
-
-    // Find user (normalize email so Demo1@... matches demo1@...)
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      console.warn("[Auth] Login failed: user not found for email:", email);
-      throw new AppError("Email not found. Please register first or check your email address", 401);
-    }
-
-    // Verify password (compare trimmed input with stored hash)
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      console.warn("[Auth] Login failed: invalid password for email:", email);
-      throw new AppError("Incorrect password. Please try again", 401);
-    }
-
-    // Generate JWT token
-    const token = this.generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role,
-      },
-      token,
-    };
+  /** Local login disabled – use Capital Chain login and POST /auth/store-token. */
+  async login(_data: LoginInput): Promise<AuthResponseDTO> {
+    throw new AppError("Please use Capital Chain login.", 501);
   }
 
   async logout(): Promise<{ success: boolean; message: string }> {
@@ -113,13 +35,9 @@ export class AuthService {
     }
   }
 
-  /** Get full user for authenticated request (e.g. GET /auth/me). */
-  async getUserById(userId: string): Promise<{ id: string; email: string; displayName: string; role: string } | null> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, displayName: true, role: true },
-    });
-    return user;
+  /** No longer used – getMe uses req.user payload only (User table dropped). */
+  async getUserById(_userId: string): Promise<{ id: string; email: string; displayName: string; role: string } | null> {
+    return null;
   }
 
   private generateToken(payload: UserPayload): string {

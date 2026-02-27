@@ -10,14 +10,16 @@ import type {
 import { tradeAnalyticsDataSource } from "./analytics.datasource.prisma";
 
 /**
- * Resolve MT5 trader ID for a user. Previously used TradingAccount (dropped).
- * Returns null so progress/analytics return safe defaults until a new link (e.g. auth_tokens) is added.
+ * Resolve MT5 trader ID for the current user (Capital Chain user id).
+ * Uses auth_tokens.mt5TraderId when set; otherwise returns null.
  */
-export async function resolveMt5TraderIdForUser(_userId: string): Promise<string | null> {
+export async function resolveMt5TraderIdForUser(ccUserId: string): Promise<string | null> {
   try {
-    // TradingAccount and User tables were dropped; no link from CC user to MT5 trader yet.
-    // TODO: resolve via auth_tokens or a dedicated mapping table when available.
-    return null;
+    const row = await prisma.storedAuthToken.findFirst({
+      where: { ccUserId },
+      select: { mt5TraderId: true },
+    });
+    return row?.mt5TraderId ?? null;
   } catch {
     return null;
   }

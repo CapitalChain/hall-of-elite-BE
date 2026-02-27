@@ -96,56 +96,50 @@ export const getEliteLeaderboardFromTraderScores = async (
 };
 
 /**
- * Fetch elite leaderboard data from the latest snapshot run.
- * Read-only, snapshot-based view for the /elite page.
+ * Fetch elite leaderboard from snapshot (snapshot_runs / trader_snapshots).
+ * Tables were dropped – return [] so getEliteLeaderboard uses MT5 tables only.
  */
 export const getEliteLeaderboardFromLatestSnapshot = async (
-  limit = 100
+  _limit = 100
 ): Promise<EliteListItem[]> => {
-  const latestRun = await prisma.snapshotRun.findFirst({
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const latestRun = await prisma.snapshotRun.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+    if (!latestRun) return [];
 
-  if (!latestRun) {
+    const rows = await prisma.traderSnapshot.findMany({
+      where: { snapshotId: latestRun.id },
+      orderBy: { rank: "asc" },
+      take: _limit,
+    });
+    if (rows.length === 0) return [];
+
+    const traderIds = rows.map((row) => row.traderId);
+    const traders = await prisma.mt5Trader.findMany({
+      where: { id: { in: traderIds } },
+    });
+    const nameById = new Map(traders.map((t) => [t.id, t.name]));
+
+    return rows.map((row) => ({
+      traderId: row.traderId,
+      externalTraderId: row.externalTraderId,
+      displayName: nameById.get(row.traderId) ?? row.externalTraderId,
+      score: row.score,
+      rank: row.rank,
+      tier: row.tier as TraderTier,
+      badges: row.badges as unknown as TraderSnapshotBadges,
+      metrics: row.metrics as unknown as TraderSnapshotMetricsSummary,
+    }));
+  } catch {
     return [];
   }
-
-  const rows = await prisma.traderSnapshot.findMany({
-    where: { snapshotId: latestRun.id },
-    orderBy: { rank: "asc" },
-    take: limit,
-  });
-
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const traderIds = rows.map((row) => row.traderId);
-  const traders = await prisma.mt5Trader.findMany({
-    where: {
-      id: { in: traderIds },
-    },
-  });
-
-  const nameById = new Map(traders.map((t) => [t.id, t.name]));
-
-  return rows.map((row) => ({
-    traderId: row.traderId,
-    externalTraderId: row.externalTraderId,
-    displayName: nameById.get(row.traderId) ?? row.externalTraderId,
-    score: row.score,
-    rank: row.rank,
-    tier: row.tier as TraderTier,
-    badges: row.badges as unknown as TraderSnapshotBadges,
-    metrics: row.metrics as unknown as TraderSnapshotMetricsSummary,
-  }));
 };
 
 /**
- * Get elite leaderboard: snapshot first, then mt5_trader_scores, so DB data always shows.
+ * Get elite leaderboard from current DB tables only: mt5_traders + mt5_trader_scores (and mt5_trader_metrics).
+ * Snapshot tables (snapshot_runs, trader_snapshots) were dropped.
  */
 export const getEliteLeaderboard = async (limit = 100): Promise<EliteListItem[]> => {
-  const fromSnapshot = await getEliteLeaderboardFromLatestSnapshot(limit);
-  if (fromSnapshot.length > 0) return fromSnapshot;
   return getEliteLeaderboardFromTraderScores(limit);
 };
