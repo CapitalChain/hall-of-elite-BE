@@ -3,6 +3,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserProgress = getUserProgress;
 exports.getUserTradeAnalytics = getUserTradeAnalytics;
 const progress_service_1 = require("./progress.service");
+const progress_config_1 = require("./progress.config");
+const progress_config_2 = require("./progress.config");
+function getDefaultProgress() {
+    const pointsToReturn = progress_config_1.MIN_POINTS_START;
+    const rewardTargets = progress_config_2.REWARD_TARGET_THRESHOLDS.map((requiredPoints, index) => {
+        const id = index + 1;
+        const unlocked = pointsToReturn >= requiredPoints;
+        return {
+            id,
+            label: id === 1 ? "Unlocked" : `Target ${id}`,
+            unlocked,
+            canUnlock: unlocked,
+            requiredPoints,
+            requiredLevel: requiredPoints,
+        };
+    });
+    const firstLocked = rewardTargets.find((t) => !t.unlocked);
+    return {
+        currentPoints: pointsToReturn,
+        nextRewardThreshold: firstLocked?.requiredPoints ?? 100,
+        rewardTargets,
+        currentLevel: pointsToReturn,
+    };
+}
 async function getUserProgress(req, res, next) {
     try {
         const userId = req.user?.id;
@@ -14,7 +38,7 @@ async function getUserProgress(req, res, next) {
         res.json({ success: true, data: progress });
     }
     catch (error) {
-        next(error);
+        res.status(200).json({ success: true, data: getDefaultProgress() });
     }
 }
 async function getUserTradeAnalytics(req, res, next) {
