@@ -18,6 +18,9 @@ import payoutRoutes from "./modules/payout/payout.routes";
 export const createApp = (): Express => {
   const app = express();
 
+  // Trust first proxy (nginx/reverse proxy) so rate limit and IP-based logic use X-Forwarded-For
+  app.set("trust proxy", 1);
+
   const hallOrigin = "https://hall.capitalchain.co";
   const allowedOrigins = [
     ...new Set([
