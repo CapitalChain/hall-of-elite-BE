@@ -1,9 +1,9 @@
 import type { UserProgressResponse, UserTradeAnalyticsResponse } from "./progress.types";
 /**
- * Resolve MT5 trader ID for a user by linking TradingAccount.accountNumber to Mt5TradingAccount.externalId.
- * Returns the first matching trader ID or null if none.
+ * Resolve MT5 trader ID for a user. Previously used TradingAccount (dropped).
+ * Returns null so progress/analytics return safe defaults until a new link (e.g. auth_tokens) is added.
  */
-export declare function resolveMt5TraderIdForUser(userId: string): Promise<string | null>;
+export declare function resolveMt5TraderIdForUser(_userId: string): Promise<string | null>;
 export interface GetTradeAnalyticsOptions {
     /** Limit equity curve to last N days. Omit for all time. */
     equityDays?: number;

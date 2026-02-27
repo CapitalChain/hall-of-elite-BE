@@ -22,17 +22,22 @@ exports.tradeAnalyticsDataSource = {
         };
     },
     async getPayout(traderId) {
-        const row = await client_1.prisma.traderPayout.findUnique({
-            where: { traderId },
-            select: { payoutPercent: true, averageTradesPerDay: true, totalTradingDays: true },
-        });
-        if (!row)
+        try {
+            const row = await client_1.prisma.traderPayout.findUnique({
+                where: { traderId },
+                select: { payoutPercent: true, averageTradesPerDay: true, totalTradingDays: true },
+            });
+            if (!row)
+                return null;
+            return {
+                payoutPercent: row.payoutPercent,
+                averageTradesPerDay: row.averageTradesPerDay,
+                totalTradingDays: row.totalTradingDays,
+            };
+        }
+        catch {
             return null;
-        return {
-            payoutPercent: row.payoutPercent,
-            averageTradesPerDay: row.averageTradesPerDay,
-            totalTradingDays: row.totalTradingDays,
-        };
+        }
     },
     async getClosedTrades(traderId, options) {
         const accounts = await client_1.prisma.mt5TradingAccount.findMany({

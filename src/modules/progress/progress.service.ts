@@ -10,22 +10,17 @@ import type {
 import { tradeAnalyticsDataSource } from "./analytics.datasource.prisma";
 
 /**
- * Resolve MT5 trader ID for a user by linking TradingAccount.accountNumber to Mt5TradingAccount.externalId.
- * Returns the first matching trader ID or null if none.
+ * Resolve MT5 trader ID for a user. Previously used TradingAccount (dropped).
+ * Returns null so progress/analytics return safe defaults until a new link (e.g. auth_tokens) is added.
  */
-export async function resolveMt5TraderIdForUser(userId: string): Promise<string | null> {
-  const accounts = await prisma.tradingAccount.findMany({
-    where: { userId },
-    select: { accountNumber: true },
-  });
-  const accountNumbers = accounts.map((a) => a.accountNumber).filter(Boolean);
-  if (accountNumbers.length === 0) return null;
-
-  const mt5Account = await prisma.mt5TradingAccount.findFirst({
-    where: { externalId: { in: accountNumbers } },
-    select: { traderId: true },
-  });
-  return mt5Account?.traderId ?? null;
+export async function resolveMt5TraderIdForUser(_userId: string): Promise<string | null> {
+  try {
+    // TradingAccount and User tables were dropped; no link from CC user to MT5 trader yet.
+    // TODO: resolve via auth_tokens or a dedicated mapping table when available.
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** Get start of ISO week (Monday) for a date */
@@ -185,18 +180,16 @@ export async function getProgressForUser(userId: string): Promise<UserProgressRe
   let currentPoints = 0;
 
   if (traderId) {
-    const [payout, metrics] = await Promise.all([
-      prisma.traderPayout.findUnique({
-        where: { traderId },
-        select: { payoutPercent: true, totalTradingDays: true },
-      }),
-      prisma.mt5TraderMetrics.findUnique({
+    try {
+      const metrics = await prisma.mt5TraderMetrics.findUnique({
         where: { traderId },
         select: { totalTradingDays: true },
-      }),
-    ]);
-    const totalTradingDays = metrics?.totalTradingDays ?? payout?.totalTradingDays ?? 0;
-    currentPoints = computePointsFromPayout(payout?.payoutPercent ?? null, totalTradingDays);
+      });
+      const totalTradingDays = metrics?.totalTradingDays ?? 0;
+      currentPoints = computePointsFromPayout(null, totalTradingDays);
+    } catch {
+      // mt5_trader_metrics may be missing; keep currentPoints 0
+    }
   }
 
   const pointsToReturn = Math.max(currentPoints, MIN_POINTS_START);

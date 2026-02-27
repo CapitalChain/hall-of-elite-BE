@@ -26,16 +26,20 @@ export const tradeAnalyticsDataSource: ITradeAnalyticsDataSource = {
   },
 
   async getPayout(traderId: string): Promise<TraderPayoutRow | null> {
-    const row = await prisma.traderPayout.findUnique({
-      where: { traderId },
-      select: { payoutPercent: true, averageTradesPerDay: true, totalTradingDays: true },
-    });
-    if (!row) return null;
-    return {
-      payoutPercent: row.payoutPercent,
-      averageTradesPerDay: row.averageTradesPerDay,
-      totalTradingDays: row.totalTradingDays,
-    };
+    try {
+      const row = await prisma.traderPayout.findUnique({
+        where: { traderId },
+        select: { payoutPercent: true, averageTradesPerDay: true, totalTradingDays: true },
+      });
+      if (!row) return null;
+      return {
+        payoutPercent: row.payoutPercent,
+        averageTradesPerDay: row.averageTradesPerDay,
+        totalTradingDays: row.totalTradingDays,
+      };
+    } catch {
+      return null;
+    }
   },
 
   async getClosedTrades(
