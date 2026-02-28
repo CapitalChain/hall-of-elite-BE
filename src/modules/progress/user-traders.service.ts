@@ -21,36 +21,45 @@ export interface LinkedTraderDto {
 /**
  * List all MT5 accounts (logins) linked to this Capital Chain user.
  * Display names from cc-conclave "accounts" when mt5_traders is not used.
+ * Returns [] if user_trader_links table is missing or any query fails (avoids 500).
  */
 export async function getLinkedTradersForUser(ccUserId: string): Promise<LinkedTraderDto[]> {
-  const links = await prisma.userTraderLink.findMany({
-    where: { ccUserId },
-    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-  });
-  if (links.length === 0) return [];
-
-  const nameById = new Map<string, string>();
   try {
-    const traders = await prisma.mt5Trader.findMany({
-      where: { id: { in: links.map((l) => l.mt5TraderId) } },
-      select: { id: true, name: true },
+    const links = await prisma.userTraderLink.findMany({
+      where: { ccUserId },
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     });
-    traders.forEach((t) => nameById.set(t.id, t.name));
-  } catch {
-    // mt5_traders may not exist in cc-conclave DB; use Conclave accounts
-  }
-  if (nameById.size === 0) {
-    for (const l of links) {
-      const name = await getConclaveAccountNameByLogin(l.mt5TraderId);
-      if (name) nameById.set(l.mt5TraderId, name);
+    if (links.length === 0) return [];
+
+    const nameById = new Map<string, string>();
+    try {
+      const traders = await prisma.mt5Trader.findMany({
+        where: { id: { in: links.map((l) => l.mt5TraderId) } },
+        select: { id: true, name: true },
+      });
+      traders.forEach((t) => nameById.set(t.id, t.name));
+    } catch {
+      // mt5_traders may not exist in cc-conclave DB; use Conclave accounts
     }
+    if (nameById.size === 0) {
+      for (const l of links) {
+        try {
+          const name = await getConclaveAccountNameByLogin(l.mt5TraderId);
+          if (name) nameById.set(l.mt5TraderId, name);
+        } catch {
+          // skip name for this link
+        }
+      }
+    }
+    return links.map((l) => ({
+      traderId: l.mt5TraderId,
+      displayName: nameById.get(l.mt5TraderId) ?? l.displayLabel?.trim() ?? l.mt5TraderId,
+      displayLabel: l.displayLabel,
+      isPrimary: l.isPrimary,
+    }));
+  } catch {
+    return [];
   }
-  return links.map((l) => ({
-    traderId: l.mt5TraderId,
-    displayName: nameById.get(l.mt5TraderId) ?? l.displayLabel?.trim() ?? l.mt5TraderId,
-    displayLabel: l.displayLabel,
-    isPrimary: l.isPrimary,
-  }));
 }
 
 /**

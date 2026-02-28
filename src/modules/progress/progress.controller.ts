@@ -76,7 +76,7 @@ export async function getUserTradeAnalytics(req: Request, res: Response, next: N
   }
 }
 
-/** GET /user/traders – list MT5 accounts (IDs) linked to the current Capital Chain user. */
+/** GET /user/traders – list MT5 accounts (logins) linked to the current Capital Chain user. Returns [] if table missing or error. */
 export async function getLinkedTraders(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.user?.id;
@@ -84,7 +84,12 @@ export async function getLinkedTraders(req: Request, res: Response, next: NextFu
       res.status(401).json({ success: false, error: "Authentication required" });
       return;
     }
-    const list = await getLinkedTradersForUser(userId);
+    let list: Awaited<ReturnType<typeof getLinkedTradersForUser>> = [];
+    try {
+      list = await getLinkedTradersForUser(userId);
+    } catch {
+      list = [];
+    }
     res.json({ success: true, data: list });
   } catch (error) {
     next(error);
