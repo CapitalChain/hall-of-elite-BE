@@ -2,9 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTraderById = exports.getAllTraders = void 0;
 const trader_service_1 = require("../services/trader.service");
-const types_1 = require("../types");
 const elite_read_1 = require("../modules/snapshots/read-models/elite.read");
 const traderProfile_read_1 = require("../modules/snapshots/read-models/traderProfile.read");
+const conclave_elite_1 = require("../modules/progress/conclave-elite");
 const traderService = new trader_service_1.TraderService();
 /** Map snapshot profile to API TraderProfile shape */
 function snapshotToTraderProfile(snap) {
@@ -39,11 +39,7 @@ function snapshotToTraderProfile(snap) {
         },
     };
 }
-const MOCK_TRADERS = [
-    { id: "1", userId: "user-1", displayName: "Elite Trader Alpha", tier: types_1.TraderTier.ELITE, rank: 1, createdAt: new Date(), updatedAt: new Date() },
-    { id: "2", userId: "user-2", displayName: "Diamond Trader Beta", tier: types_1.TraderTier.DIAMOND, rank: 2, createdAt: new Date(), updatedAt: new Date() },
-    { id: "3", userId: "user-3", displayName: "Platinum Trader Gamma", tier: types_1.TraderTier.PLATINUM, rank: 3, createdAt: new Date(), updatedAt: new Date() },
-];
+/** Elite list from cc-conclave only (mt5_traders + mt5_trader_scores). No mock data. */
 const getAllTraders = async (req, res, next) => {
     try {
         const page = Number(req.query.page) || 1;
@@ -54,32 +50,24 @@ const getAllTraders = async (req, res, next) => {
             list = await (0, elite_read_1.getEliteLeaderboard)(limit * 10);
         }
         catch {
-            // Snapshot/score tables may not exist or DB error; fall back to mock
+            list = [];
         }
-        if (list.length > 0) {
-            const traders = list.map((item, index) => ({
-                id: item.traderId,
-                userId: item.traderId,
-                displayName: item.displayName,
-                tier: item.tier,
-                rank: item.rank,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            }));
-            const filtered = tier ? traders.filter((t) => t.tier === tier) : traders;
-            const start = (page - 1) * limit;
-            const paginated = filtered.slice(start, start + limit);
-            return res.json({
-                success: true,
-                data: paginated,
-                pagination: { page, limit, total: filtered.length },
-            });
-        }
-        const filteredTraders = tier ? MOCK_TRADERS.filter((t) => t.tier === tier) : MOCK_TRADERS;
+        const traders = list.map((item) => ({
+            id: item.traderId,
+            userId: item.traderId,
+            displayName: item.displayName,
+            tier: item.tier,
+            rank: item.rank,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        }));
+        const filtered = tier ? traders.filter((t) => t.tier === tier) : traders;
+        const start = (page - 1) * limit;
+        const paginated = filtered.slice(start, start + limit);
         res.json({
             success: true,
-            data: filteredTraders,
-            pagination: { page, limit, total: filteredTraders.length },
+            data: paginated,
+            pagination: { page, limit, total: filtered.length },
         });
     }
     catch (error) {
@@ -87,10 +75,16 @@ const getAllTraders = async (req, res, next) => {
     }
 };
 exports.getAllTraders = getAllTraders;
+/** Trader profile: CC Conclave (accounts + deals) by login first, else mt5_traders + scores + metrics. 404 when not found. */
 const getTraderById = async (req, res, next) => {
     try {
         const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0] ?? "";
-        // When list comes from snapshot, id is Mt5Trader.id – try snapshot profile first
+        if (/^\d+$/.test(id.trim())) {
+            const conclaveProfile = await (0, conclave_elite_1.getTraderProfileFromConclave)(id);
+            if (conclaveProfile) {
+                return res.json({ success: true, data: conclaveProfile });
+            }
+        }
         try {
             const snapshotProfile = await (0, traderProfile_read_1.getTraderProfileFromLatestSnapshot)(id);
             const mapped = snapshotToTraderProfile(snapshotProfile);
@@ -99,15 +93,13 @@ const getTraderById = async (req, res, next) => {
             }
         }
         catch {
-            // Snapshot read failed; continue to legacy
+            // Snapshot tables dropped; use MT5 only
         }
-        // Legacy: id may be tradingAccountId (TraderScore / TraderMetrics)
         const profile = await traderService.getTraderProfile(id);
         if (profile) {
             return res.json({ success: true, data: profile });
         }
-        const mockProfile = await traderService.getTraderProfileMock(id);
-        return res.json({ success: true, data: mockProfile });
+        res.status(404).json({ success: false, error: "Trader not found" });
     }
     catch (error) {
         next(error);

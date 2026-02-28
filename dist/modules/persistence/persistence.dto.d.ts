@@ -9,19 +9,19 @@ export declare const mt5RawUserSchema: z.ZodObject<{
     group: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     name: string;
-    balance: number;
     login: string | number;
+    balance: number;
     status?: string | null | undefined;
-    leverage?: number | null | undefined;
     currency?: string | null | undefined;
+    leverage?: number | null | undefined;
     group?: string | undefined;
 }, {
     name: string;
-    balance: number;
     login: string | number;
+    balance: number;
     status?: string | null | undefined;
-    leverage?: number | null | undefined;
     currency?: string | null | undefined;
+    leverage?: number | null | undefined;
     group?: string | undefined;
 }>;
 export type Mt5RawUser = z.infer<typeof mt5RawUserSchema>;
@@ -30,12 +30,12 @@ export declare const mt5TraderSchema: z.ZodObject<{
     name: z.ZodString;
     accountStatus: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    name: string;
     externalId: string;
+    name: string;
     accountStatus: string;
 }, {
-    name: string;
     externalId: string;
+    name: string;
     accountStatus: string;
 }>;
 export declare const mt5AccountSchema: z.ZodObject<{
@@ -48,16 +48,16 @@ export declare const mt5AccountSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     status: string;
     externalId: string;
-    balance: number;
-    leverage: number;
     currency: string;
+    leverage: number;
+    balance: number;
     traderExternalId: string;
 }, {
     status: string;
     externalId: string;
-    balance: number;
-    leverage: number;
     currency: string;
+    leverage: number;
+    balance: number;
     traderExternalId: string;
 }>;
 export declare const mt5TradeSchema: z.ZodObject<{
@@ -74,9 +74,9 @@ export declare const mt5TradeSchema: z.ZodObject<{
     symbol: string;
     status: string;
     externalId: string;
-    volume: number;
     profitLoss: number;
     fees: number;
+    volume: number;
     openTime: Date;
     accountExternalId: string;
     closeTime?: Date | undefined;
@@ -84,9 +84,9 @@ export declare const mt5TradeSchema: z.ZodObject<{
     symbol: string;
     status: string;
     externalId: string;
-    volume: number;
     profitLoss: number;
     fees: number;
+    volume: number;
     openTime: Date;
     accountExternalId: string;
     closeTime?: Date | undefined;
@@ -98,14 +98,14 @@ export declare const mt5MetricsSchema: z.ZodObject<{
     drawdown: z.ZodNumber;
     totalTradingDays: z.ZodNumber;
 }, "strip", z.ZodTypeAny, {
-    winRate: number;
     profitFactor: number;
+    winRate: number;
     drawdown: number;
     totalTradingDays: number;
     traderExternalId: string;
 }, {
-    winRate: number;
     profitFactor: number;
+    winRate: number;
     drawdown: number;
     totalTradingDays: number;
     traderExternalId: string;

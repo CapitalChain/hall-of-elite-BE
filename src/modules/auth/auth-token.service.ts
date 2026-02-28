@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { prisma } from "../../prisma/client";
 import { env } from "../../config/env";
 import { AppError } from "../../middlewares/errorHandler";
+import { addTraderLink } from "../progress/user-traders.service";
 
 /** Validate token with Capital Chain and return user info */
 async function validateCapitalChainToken(
@@ -37,7 +38,7 @@ function generateBypassToken(): string {
 /**
  * Validate token with Capital Chain, store it in DB, and return a bypass token.
  * Call this after the user has logged in via Capital Chain (send their token in Authorization).
- * Optional mt5TraderId links this user to mt5_traders.id for dashboard data.
+ * Optional mt5TraderId = MT5 account ID to link to this Capital Chain user (multi-account: one email → many MT5 IDs).
  */
 export async function storeTokenAndGetBypass(
   authHeader: string,
@@ -75,6 +76,14 @@ export async function storeTokenAndGetBypass(
         ...data,
       },
     });
+  }
+
+  if (data.mt5TraderId) {
+    try {
+      await addTraderLink(ccUser.id, data.mt5TraderId, null);
+    } catch (e) {
+      if ((e as { statusCode?: number })?.statusCode !== 404) throw e;
+    }
   }
 
   return { bypassToken };

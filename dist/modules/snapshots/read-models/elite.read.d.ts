@@ -17,12 +17,12 @@ export interface EliteListItem {
  */
 export declare const getEliteLeaderboardFromTraderScores: (limit?: number) => Promise<EliteListItem[]>;
 /**
- * Fetch elite leaderboard data from the latest snapshot run.
- * Read-only, snapshot-based view for the /elite page.
+ * Fetch elite leaderboard from snapshot (snapshot_runs / trader_snapshots).
+ * Tables were dropped – return [] so getEliteLeaderboard uses MT5 tables only.
  */
-export declare const getEliteLeaderboardFromLatestSnapshot: (limit?: number) => Promise<EliteListItem[]>;
+export declare const getEliteLeaderboardFromLatestSnapshot: (_limit?: number) => Promise<EliteListItem[]>;
 /**
- * Get elite leaderboard: snapshot first, then mt5_trader_scores, so DB data always shows.
+ * Get elite leaderboard: CC Conclave (accounts + deals) first when available, else mt5_traders + mt5_trader_scores.
  */
 export declare const getEliteLeaderboard: (limit?: number) => Promise<EliteListItem[]>;
 //# sourceMappingURL=elite.read.d.ts.map

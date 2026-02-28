@@ -136,10 +136,19 @@ export const getEliteLeaderboardFromLatestSnapshot = async (
   }
 };
 
+import { getEliteLeaderboardFromConclave, isConclaveAvailable } from "../../progress/conclave-elite";
+
 /**
- * Get elite leaderboard from current DB tables only: mt5_traders + mt5_trader_scores (and mt5_trader_metrics).
- * Snapshot tables (snapshot_runs, trader_snapshots) were dropped.
+ * Get elite leaderboard: CC Conclave (accounts + deals) first when available, else mt5_traders + mt5_trader_scores.
  */
 export const getEliteLeaderboard = async (limit = 100): Promise<EliteListItem[]> => {
+  try {
+    if (await isConclaveAvailable()) {
+      const list = await getEliteLeaderboardFromConclave(limit);
+      if (list.length > 0) return list as EliteListItem[];
+    }
+  } catch {
+    // fallback to mt5 tables
+  }
   return getEliteLeaderboardFromTraderScores(limit);
 };

@@ -270,14 +270,14 @@ model TraderPayout {
 }
 
 // Store Capital Chain token + optional bypass token for URL login
-// mt5TraderId links this user to mt5_traders.id for dashboard/analytics
+// mt5TraderId links this user to mt5_traders.id for dashboard/analytics (legacy default)
 model StoredAuthToken {
   id           String   @id @default(uuid())
   ccUserId     String
   email        String
   token        String
   bypassToken  String?  @unique
-  mt5TraderId  String?  // mt5_traders.id – set when user is linked to an MT5 trader
+  mt5TraderId  String?  // legacy default; prefer user_trader_links for multi-account
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -285,4 +285,20 @@ model StoredAuthToken {
   @@index([email])
   @@index([mt5TraderId])
   @@map("auth_tokens")
+}
+
+// One user (ccUserId) can have multiple MT5 traders; user switches which account to view.
+model UserTraderLink {
+  id           String   @id @default(uuid())
+  ccUserId     String
+  mt5TraderId  String
+  displayLabel String?
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([ccUserId, mt5TraderId])
+  @@index([ccUserId])
+  @@index([mt5TraderId])
+  @@map("user_trader_links")
 }

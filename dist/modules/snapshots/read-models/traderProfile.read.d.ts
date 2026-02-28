@@ -11,8 +11,8 @@ export interface TraderProfileSnapshot {
     readonly metrics: TraderSnapshotMetricsSummary;
 }
 /**
- * Read model for /elite/[id] – returns the latest snapshot view
- * for a specific trader, if available.
+ * Read model for /elite/[id] – snapshot tables (snapshot_runs, trader_snapshots) were dropped.
+ * Returns null so trader controller uses MT5 tables (getTraderProfile from mt5_traders/scores/metrics).
  */
-export declare const getTraderProfileFromLatestSnapshot: (traderId: string) => Promise<TraderProfileSnapshot | null>;
+export declare const getTraderProfileFromLatestSnapshot: (_traderId: string) => Promise<TraderProfileSnapshot | null>;
 //# sourceMappingURL=traderProfile.read.d.ts.map

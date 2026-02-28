@@ -37,14 +37,36 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            set -e
             echo "📂 Navigating to backend folder..."
             cd /home/bhallofelite/hall-of-elite-BE
 
-            echo "🔄 Installing production dependencies..."
-            npm ci --omit=dev
+            echo "💾 Backing up .env (server-only, not in repo)..."
+            cp -a .env .env.backup 2>/dev/null || true
 
-            echo "🗄 Running Prisma migrations..."
-            npx prisma migrate deploy --schema=./src/prisma/schema.prisma || true
+            echo "📥 Fetching latest code from main..."
+            git fetch origin main
+
+            echo "🔄 Resetting to origin/main (discard local changes to tracked files)..."
+            git reset --hard origin/main
+
+            echo "🔙 Restoring .env from backup..."
+            if [ -f .env.backup ]; then mv .env.backup .env; fi
+
+            echo "📦 Installing all dependencies (need devDependencies for tsc build)..."
+            npm ci
+
+            echo "🧹 Cleaning old build (avoid missing modules like auth-token.service)..."
+            rm -rf dist
+
+            echo "🔨 Building..."
+            npm run build
+
+            echo "📦 Pruning to production dependencies only..."
+            npm prune --production
+
+            echo "🗄 Running Prisma migrations (optional)..."
+            npx prisma migrate deploy --schema=./src/prisma/schema.prisma 2>/dev/null || true
 
             echo "🚀 Restarting PM2 process..."
             pm2 restart hall-of-elite-be || pm2 start dist/index.js --name hall-of-elite-be

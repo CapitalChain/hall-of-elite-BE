@@ -57,4 +57,8 @@ export interface UserTradeAnalyticsResponse {
   avgTradeSize?: number;
   /** Average trade duration as human string (e.g. "2h:10m:52s") */
   avgTradeDuration?: string;
+  /** Current balance from cc-conclave mt5_trading_accounts (sum of trader's accounts) */
+  currentBalance?: number | null;
+  /** High-water mark: from DB if available, else derived from cumulative PnL */
+  hwmBalance?: number | null;
 }

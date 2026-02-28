@@ -75,50 +75,59 @@ const getEliteLeaderboardFromTraderScores = async (limit = 100) => {
 };
 exports.getEliteLeaderboardFromTraderScores = getEliteLeaderboardFromTraderScores;
 /**
- * Fetch elite leaderboard data from the latest snapshot run.
- * Read-only, snapshot-based view for the /elite page.
+ * Fetch elite leaderboard from snapshot (snapshot_runs / trader_snapshots).
+ * Tables were dropped – return [] so getEliteLeaderboard uses MT5 tables only.
  */
-const getEliteLeaderboardFromLatestSnapshot = async (limit = 100) => {
-    const latestRun = await client_1.prisma.snapshotRun.findFirst({
-        orderBy: { createdAt: "desc" },
-    });
-    if (!latestRun) {
+const getEliteLeaderboardFromLatestSnapshot = async (_limit = 100) => {
+    try {
+        const latestRun = await client_1.prisma.snapshotRun.findFirst({
+            orderBy: { createdAt: "desc" },
+        });
+        if (!latestRun)
+            return [];
+        const rows = await client_1.prisma.traderSnapshot.findMany({
+            where: { snapshotId: latestRun.id },
+            orderBy: { rank: "asc" },
+            take: _limit,
+        });
+        if (rows.length === 0)
+            return [];
+        const traderIds = rows.map((row) => row.traderId);
+        const traders = await client_1.prisma.mt5Trader.findMany({
+            where: { id: { in: traderIds } },
+        });
+        const nameById = new Map(traders.map((t) => [t.id, t.name]));
+        return rows.map((row) => ({
+            traderId: row.traderId,
+            externalTraderId: row.externalTraderId,
+            displayName: nameById.get(row.traderId) ?? row.externalTraderId,
+            score: row.score,
+            rank: row.rank,
+            tier: row.tier,
+            badges: row.badges,
+            metrics: row.metrics,
+        }));
+    }
+    catch {
         return [];
     }
-    const rows = await client_1.prisma.traderSnapshot.findMany({
-        where: { snapshotId: latestRun.id },
-        orderBy: { rank: "asc" },
-        take: limit,
-    });
-    if (rows.length === 0) {
-        return [];
-    }
-    const traderIds = rows.map((row) => row.traderId);
-    const traders = await client_1.prisma.mt5Trader.findMany({
-        where: {
-            id: { in: traderIds },
-        },
-    });
-    const nameById = new Map(traders.map((t) => [t.id, t.name]));
-    return rows.map((row) => ({
-        traderId: row.traderId,
-        externalTraderId: row.externalTraderId,
-        displayName: nameById.get(row.traderId) ?? row.externalTraderId,
-        score: row.score,
-        rank: row.rank,
-        tier: row.tier,
-        badges: row.badges,
-        metrics: row.metrics,
-    }));
 };
 exports.getEliteLeaderboardFromLatestSnapshot = getEliteLeaderboardFromLatestSnapshot;
+const conclave_elite_1 = require("../../progress/conclave-elite");
 /**
- * Get elite leaderboard: snapshot first, then mt5_trader_scores, so DB data always shows.
+ * Get elite leaderboard: CC Conclave (accounts + deals) first when available, else mt5_traders + mt5_trader_scores.
  */
 const getEliteLeaderboard = async (limit = 100) => {
-    const fromSnapshot = await (0, exports.getEliteLeaderboardFromLatestSnapshot)(limit);
-    if (fromSnapshot.length > 0)
-        return fromSnapshot;
+    try {
+        if (await (0, conclave_elite_1.isConclaveAvailable)()) {
+            const list = await (0, conclave_elite_1.getEliteLeaderboardFromConclave)(limit);
+            if (list.length > 0)
+                return list;
+        }
+    }
+    catch {
+        // fallback to mt5 tables
+    }
     return (0, exports.getEliteLeaderboardFromTraderScores)(limit);
 };
 exports.getEliteLeaderboard = getEliteLeaderboard;

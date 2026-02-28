@@ -6,15 +6,64 @@ exports.getProgressForUser = getProgressForUser;
 const client_1 = require("../../prisma/client");
 const progress_config_1 = require("./progress.config");
 const analytics_datasource_prisma_1 = require("./analytics.datasource.prisma");
+const conclave_datasource_1 = require("./conclave.datasource");
 /**
- * Resolve MT5 trader ID for a user. Previously used TradingAccount (dropped).
- * Returns null so progress/analytics return safe defaults until a new link (e.g. auth_tokens) is added.
+ * Multi-account model: one Capital Chain account (email/user) can have multiple MT5 account IDs.
+ * Each MT5 ID is one MT5 account; progress and analytics are always for a single resolved account.
+ *
+ * Resolves which MT5 account ID to use for this CC user, in order:
+ * 1. selectedTraderId (from query/header) if the user has that MT5 account linked
+ * 2. Primary MT5 account from user_trader_links
+ * 3. First linked MT5 account (by creation date)
+ * 4. Legacy: mt5TraderId from auth_tokens (e.g. from initial store-token)
+ * 5. null (no account → default progress/empty analytics)
  */
-async function resolveMt5TraderIdForUser(_userId) {
+async function resolveMt5TraderIdForUser(ccUserId, selectedTraderId) {
     try {
-        // TradingAccount and User tables were dropped; no link from CC user to MT5 trader yet.
-        // TODO: resolve via auth_tokens or a dedicated mapping table when available.
+        if (selectedTraderId?.trim()) {
+            const link = await client_1.prisma.userTraderLink.findUnique({
+                where: { ccUserId_mt5TraderId: { ccUserId, mt5TraderId: selectedTraderId.trim() } },
+            });
+            if (link)
+                return link.mt5TraderId;
+        }
+        const primary = await client_1.prisma.userTraderLink.findFirst({
+            where: { ccUserId, isPrimary: true },
+            select: { mt5TraderId: true },
+        });
+        if (primary)
+            return primary.mt5TraderId;
+        const anyLink = await client_1.prisma.userTraderLink.findFirst({
+            where: { ccUserId },
+            select: { mt5TraderId: true },
+            orderBy: { createdAt: "asc" },
+        });
+        if (anyLink)
+            return anyLink.mt5TraderId;
+        const token = await client_1.prisma.storedAuthToken.findFirst({
+            where: { ccUserId },
+            select: { mt5TraderId: true },
+        });
+        return token?.mt5TraderId?.trim() ?? null;
+    }
+    catch {
         return null;
+    }
+}
+/**
+ * Resolve Conclave login (MT5 account number) from stored mt5TraderId.
+ * In cc-conclave setup, user_trader_links.mt5TraderId is the login (number as string). If numeric, use as-is; else try mt5_traders.externalId if that table exists.
+ */
+async function resolveConclaveLogin(traderId) {
+    const trimmed = traderId.trim();
+    if (/^\d+$/.test(trimmed))
+        return trimmed;
+    try {
+        const t = await client_1.prisma.mt5Trader.findUnique({
+            where: { id: trimmed },
+            select: { externalId: true },
+        });
+        return t?.externalId?.trim() ?? null;
     }
     catch {
         return null;
@@ -38,12 +87,12 @@ function normalizeWinRate(value) {
     return value;
 }
 /**
- * Get trade analytics for the authenticated user (KPIs, equity curve, activity, recent trades).
- * Uses ITradeAnalyticsDataSource (Prisma today; swap for MT5 when ready).
- * Resolves user -> MT5 trader; returns defaults when no linked trader or no data.
+ * Get trade analytics for the authenticated Capital Chain user.
+ * Resolves to a single MT5 account ID (see resolveMt5TraderIdForUser); returns analytics for that account only.
+ * Returns defaults when no linked MT5 account or no data.
  */
 async function getTradeAnalyticsForUser(userId, options) {
-    const traderId = await resolveMt5TraderIdForUser(userId);
+    const traderId = await resolveMt5TraderIdForUser(userId, options?.selectedTraderId);
     const defaults = {
         winRate: 0,
         profitFactor: 0,
@@ -55,19 +104,54 @@ async function getTradeAnalyticsForUser(userId, options) {
         tradesLastWeek: 0,
         pathToNextTier: null,
         recentTrades: [],
+        currentBalance: null,
+        hwmBalance: null,
     };
     if (!traderId)
         return defaults;
-    const ds = analytics_datasource_prisma_1.tradeAnalyticsDataSource;
     const now = new Date();
     const equityFrom = options?.equityDays
         ? new Date(now.getTime() - options.equityDays * 24 * 60 * 60 * 1000)
         : undefined;
-    const [metrics, payout, closedTrades] = await Promise.all([
-        ds.getMetrics(traderId),
-        ds.getPayout(traderId),
-        ds.getClosedTrades(traderId, { fromDate: equityFrom }),
-    ]);
+    const conclaveLogin = await resolveConclaveLogin(traderId);
+    const useConclave = (await (0, conclave_datasource_1.isConclaveAvailable)()) && conclaveLogin !== null && conclaveLogin !== "";
+    let metrics = null;
+    let payout = null;
+    let closedTrades = [];
+    let currentBalance = null;
+    let hwmBalance = null;
+    if (useConclave) {
+        const [m, p, trades, balanceHwm] = await Promise.all([
+            conclave_datasource_1.conclaveAnalyticsDataSource.getMetrics(conclaveLogin),
+            conclave_datasource_1.conclaveAnalyticsDataSource.getPayout(conclaveLogin),
+            conclave_datasource_1.conclaveAnalyticsDataSource.getClosedTrades(conclaveLogin, { fromDate: equityFrom }),
+            (0, conclave_datasource_1.getConclaveBalanceAndHwm)(conclaveLogin),
+        ]);
+        metrics = m;
+        payout = p;
+        closedTrades = trades;
+        currentBalance = balanceHwm.currentBalance;
+        hwmBalance = balanceHwm.hwmBalance;
+    }
+    if (!useConclave) {
+        const ds = analytics_datasource_prisma_1.tradeAnalyticsDataSource;
+        const [m, p, trades, accountBalances] = await Promise.all([
+            ds.getMetrics(traderId),
+            ds.getPayout(traderId),
+            ds.getClosedTrades(traderId, { fromDate: equityFrom }),
+            client_1.prisma.mt5TradingAccount.findMany({
+                where: { traderId },
+                select: { balance: true },
+            }),
+        ]);
+        metrics = m;
+        payout = p;
+        closedTrades = trades;
+        currentBalance =
+            accountBalances.length > 0
+                ? accountBalances.reduce((sum, a) => sum + Number(a.balance), 0)
+                : null;
+    }
     const thisWeekStart = getWeekStart(now);
     const lastWeekStart = new Date(thisWeekStart);
     lastWeekStart.setUTCDate(lastWeekStart.getUTCDate() - 7);
@@ -126,6 +210,13 @@ async function getTradeAnalyticsForUser(userId, options) {
         else
             pathToNextTier = "You're at the top payout tier.";
     }
+    const netProfit = equityData.length > 0 ? equityData[equityData.length - 1].cumulativePnl : 0;
+    const maxCumulativePnl = equityData.length > 0 ? Math.max(...equityData.map((e) => e.cumulativePnl), 0) : 0;
+    const derivedHwm = currentBalance != null
+        ? currentBalance - netProfit + maxCumulativePnl
+        : null;
+    if (hwmBalance == null)
+        hwmBalance = derivedHwm;
     return {
         winRate: normalizeWinRate(metrics?.winRate ?? 0),
         profitFactor: metrics?.profitFactor ?? 0,
@@ -139,6 +230,8 @@ async function getTradeAnalyticsForUser(userId, options) {
         recentTrades,
         avgTradeSize,
         avgTradeDuration,
+        currentBalance: currentBalance ?? undefined,
+        hwmBalance: hwmBalance ?? undefined,
     };
 }
 /**
@@ -150,48 +243,82 @@ function computePointsFromPayout(payoutPercent, totalTradingDays) {
     const activityBonus = Math.min(totalTradingDays * 2, 45);
     return Math.round(base + activityBonus);
 }
-/**
- * Get dashboard progress for the authenticated user: current POINTS (from payout),
- * next reward threshold in points, and which targets are unlocked.
- * Points are increased based on payout tier (30/80/95) and trading days.
- */
-async function getProgressForUser(userId) {
-    const traderId = await resolveMt5TraderIdForUser(userId);
-    let currentPoints = 0;
-    if (traderId) {
-        try {
-            const metrics = await client_1.prisma.mt5TraderMetrics.findUnique({
-                where: { traderId },
-                select: { totalTradingDays: true },
-            });
-            const totalTradingDays = metrics?.totalTradingDays ?? 0;
-            currentPoints = computePointsFromPayout(null, totalTradingDays);
-        }
-        catch {
-            // mt5_trader_metrics may be missing; keep currentPoints 0
-        }
-    }
-    const pointsToReturn = Math.max(currentPoints, progress_config_1.MIN_POINTS_START);
+function getDefaultProgressResponse() {
+    const pointsToReturn = progress_config_1.MIN_POINTS_START;
     const rewardTargets = progress_config_1.REWARD_TARGET_THRESHOLDS.map((requiredPoints, index) => {
         const id = index + 1;
         const unlocked = pointsToReturn >= requiredPoints;
-        const canUnlock = unlocked;
         return {
             id,
             label: id === 1 ? "Unlocked" : `Target ${id}`,
             unlocked,
-            canUnlock,
+            canUnlock: unlocked,
             requiredPoints,
             requiredLevel: requiredPoints,
         };
     });
     const firstLocked = rewardTargets.find((t) => !t.unlocked);
-    const nextRewardThreshold = firstLocked?.requiredPoints ?? 100;
     return {
         currentPoints: pointsToReturn,
-        nextRewardThreshold,
+        nextRewardThreshold: firstLocked?.requiredPoints ?? 100,
         rewardTargets,
         currentLevel: pointsToReturn,
     };
+}
+/**
+ * Get dashboard progress for the authenticated Capital Chain user.
+ * Resolves to a single MT5 account ID; progress (points, targets) is for that account only.
+ * Never throws: returns default progress on any DB/error.
+ */
+async function getProgressForUser(userId, selectedTraderId) {
+    try {
+        const traderId = await resolveMt5TraderIdForUser(userId, selectedTraderId);
+        let currentPoints = 0;
+        if (traderId) {
+            try {
+                const conclaveLogin = await resolveConclaveLogin(traderId);
+                const useConclave = (await (0, conclave_datasource_1.isConclaveAvailable)()) && conclaveLogin !== null && conclaveLogin !== "";
+                if (useConclave) {
+                    const metrics = await conclave_datasource_1.conclaveAnalyticsDataSource.getMetrics(conclaveLogin);
+                    const totalTradingDays = metrics?.totalTradingDays ?? 0;
+                    currentPoints = computePointsFromPayout(null, totalTradingDays);
+                }
+                else {
+                    const metrics = await client_1.prisma.mt5TraderMetrics.findUnique({
+                        where: { traderId },
+                        select: { totalTradingDays: true },
+                    });
+                    const totalTradingDays = metrics?.totalTradingDays ?? 0;
+                    currentPoints = computePointsFromPayout(null, totalTradingDays);
+                }
+            }
+            catch {
+                // metrics may be missing; keep currentPoints 0
+            }
+        }
+        const pointsToReturn = Math.max(currentPoints, progress_config_1.MIN_POINTS_START);
+        const rewardTargets = progress_config_1.REWARD_TARGET_THRESHOLDS.map((requiredPoints, index) => {
+            const id = index + 1;
+            const unlocked = pointsToReturn >= requiredPoints;
+            return {
+                id,
+                label: id === 1 ? "Unlocked" : `Target ${id}`,
+                unlocked,
+                canUnlock: unlocked,
+                requiredPoints,
+                requiredLevel: requiredPoints,
+            };
+        });
+        const firstLocked = rewardTargets.find((t) => !t.unlocked);
+        return {
+            currentPoints: pointsToReturn,
+            nextRewardThreshold: firstLocked?.requiredPoints ?? 100,
+            rewardTargets,
+            currentLevel: pointsToReturn,
+        };
+    }
+    catch {
+        return getDefaultProgressResponse();
+    }
 }
 //# sourceMappingURL=progress.service.js.map

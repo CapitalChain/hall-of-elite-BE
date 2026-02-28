@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApp = void 0;
+//hello world
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
@@ -22,6 +23,8 @@ const progress_routes_1 = __importDefault(require("./modules/progress/progress.r
 const payout_routes_1 = __importDefault(require("./modules/payout/payout.routes"));
 const createApp = () => {
     const app = (0, express_1.default)();
+    // Trust first proxy (nginx/reverse proxy) so rate limit and IP-based logic use X-Forwarded-For
+    app.set("trust proxy", 1);
     const hallOrigin = "https://hall.capitalchain.co";
     const allowedOrigins = [
         ...new Set([

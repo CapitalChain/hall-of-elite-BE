@@ -74,35 +74,4 @@ export class TraderService {
     }
   }
 
-  async getTraderProfileMock(id: string): Promise<TraderProfile> {
-    // Mock data for development/testing
-    return {
-      id,
-      displayName: "Elite Trader Alpha",
-      tier: TraderTier.ELITE,
-      rank: 1,
-      accountAge: 365,
-      overallScore: 95.5,
-      metrics: {
-        profitFactor: 2.78,
-        winRate: 70.0,
-        maxDrawdown: 12.5,
-        totalProfit: 125000,
-        totalTrades: 1250,
-        tradingDays: 180,
-        sharpeRatio: 2.15,
-        averageWin: 142.86,
-        averageLoss: 120.0,
-        largestWin: 5000,
-        largestLoss: 2000,
-        currentDrawdown: 5.2,
-      },
-      rewards: {
-        phoenixAddOn: true,
-        payoutBoost: true,
-        cashback: true,
-        merchandise: false,
-      },
-    };
-  }
 }
