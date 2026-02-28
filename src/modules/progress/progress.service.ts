@@ -12,22 +12,25 @@ import {
   conclaveAnalyticsDataSource,
   getConclaveBalanceAndHwm,
   isConclaveAvailable,
+  getLoginsByEmailFromConclave,
 } from "./conclave.datasource";
 
 /**
  * Multi-account model: one Capital Chain account (email/user) can have multiple MT5 account IDs.
  * Each MT5 ID is one MT5 account; progress and analytics are always for a single resolved account.
  *
- * Resolves which MT5 account ID to use for this CC user, in order:
+ * Resolves which MT5 account ID (login) to use, in order:
  * 1. selectedTraderId (from query/header) if the user has that MT5 account linked
  * 2. Primary MT5 account from user_trader_links
  * 3. First linked MT5 account (by creation date)
- * 4. Legacy: mt5TraderId from auth_tokens (e.g. from initial store-token)
- * 5. null (no account → default progress/empty analytics)
+ * 4. mt5TraderId from auth_tokens (e.g. from store-token)
+ * 5. CC Conclave accounts by email: lookup accounts.email = current user email, use first login
+ * 6. null (no account → default progress/empty analytics)
  */
 export async function resolveMt5TraderIdForUser(
   ccUserId: string,
-  selectedTraderId?: string | null
+  selectedTraderId?: string | null,
+  userEmail?: string | null
 ): Promise<string | null> {
   try {
     if (selectedTraderId?.trim()) {
@@ -51,7 +54,17 @@ export async function resolveMt5TraderIdForUser(
       where: { ccUserId },
       select: { mt5TraderId: true },
     });
-    return token?.mt5TraderId?.trim() ?? null;
+    const fromToken = token?.mt5TraderId?.trim();
+    if (fromToken) return fromToken;
+
+    if (userEmail?.trim() && (await isConclaveAvailable())) {
+      const logins = await getLoginsByEmailFromConclave(userEmail);
+      if (logins.length > 0) {
+        if (selectedTraderId?.trim() && logins.includes(selectedTraderId.trim())) return selectedTraderId.trim();
+        return logins[0];
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -104,9 +117,9 @@ export interface GetTradeAnalyticsOptions {
  */
 export async function getTradeAnalyticsForUser(
   userId: string,
-  options?: GetTradeAnalyticsOptions & { selectedTraderId?: string | null }
+  options?: GetTradeAnalyticsOptions & { selectedTraderId?: string | null; userEmail?: string | null }
 ): Promise<UserTradeAnalyticsResponse> {
-  const traderId = await resolveMt5TraderIdForUser(userId, options?.selectedTraderId);
+  const traderId = await resolveMt5TraderIdForUser(userId, options?.selectedTraderId, options?.userEmail);
   const defaults: UserTradeAnalyticsResponse = {
     winRate: 0,
     profitFactor: 0,
@@ -302,10 +315,11 @@ function getDefaultProgressResponse(): UserProgressResponse {
  */
 export async function getProgressForUser(
   userId: string,
-  selectedTraderId?: string | null
+  selectedTraderId?: string | null,
+  userEmail?: string | null
 ): Promise<UserProgressResponse> {
   try {
-    const traderId = await resolveMt5TraderIdForUser(userId, selectedTraderId);
+    const traderId = await resolveMt5TraderIdForUser(userId, selectedTraderId, userEmail);
     let currentPoints = 0;
 
     if (traderId) {

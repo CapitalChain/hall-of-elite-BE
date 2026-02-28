@@ -53,7 +53,7 @@ async function getUserProgress(req, res, _next) {
             return;
         }
         const selectedTraderId = getSelectedTraderId(req);
-        const progress = await (0, progress_service_1.getProgressForUser)(userId, selectedTraderId);
+        const progress = await (0, progress_service_1.getProgressForUser)(userId, selectedTraderId, req.user?.email);
         res.json({ success: true, data: progress });
     }
     catch {
@@ -77,6 +77,8 @@ async function getUserTradeAnalytics(req, res, next) {
             options.equityDays = equityDays;
         if (selectedTraderId)
             options.selectedTraderId = selectedTraderId;
+        if (req.user?.email)
+            options.userEmail = req.user.email;
         const analytics = await (0, progress_service_1.getTradeAnalyticsForUser)(userId, options);
         res.json({ success: true, data: analytics });
     }
@@ -94,7 +96,7 @@ async function getLinkedTraders(req, res, next) {
         }
         let list = [];
         try {
-            list = await (0, user_traders_service_1.getLinkedTradersForUser)(userId);
+            list = await (0, user_traders_service_1.getLinkedTradersForUser)(userId, req.user?.email);
         }
         catch {
             list = [];

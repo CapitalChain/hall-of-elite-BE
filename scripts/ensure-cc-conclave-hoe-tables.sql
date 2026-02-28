@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
 );
 CREATE INDEX IF NOT EXISTS auth_tokens_ccUserId_idx ON auth_tokens("ccUserId");
 CREATE INDEX IF NOT EXISTS auth_tokens_email_idx ON auth_tokens(email);
+-- Add column if table existed from an older migration without it
+ALTER TABLE auth_tokens ADD COLUMN IF NOT EXISTS "mt5TraderId" TEXT;
 CREATE INDEX IF NOT EXISTS auth_tokens_mt5TraderId_idx ON auth_tokens("mt5TraderId");
 
 -- user_trader_links: one CC user → many MT5 logins (multi-account)

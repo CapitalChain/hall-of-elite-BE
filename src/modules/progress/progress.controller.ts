@@ -47,7 +47,7 @@ export async function getUserProgress(req: Request, res: Response, _next: NextFu
       return;
     }
     const selectedTraderId = getSelectedTraderId(req);
-    const progress = await getProgressForUser(userId, selectedTraderId);
+    const progress = await getProgressForUser(userId, selectedTraderId, req.user?.email);
     res.json({ success: true, data: progress });
   } catch {
     if (!res.headersSent) {
@@ -66,9 +66,10 @@ export async function getUserTradeAnalytics(req: Request, res: Response, next: N
     }
     const equityDays = req.query.days != null ? parseInt(String(req.query.days), 10) : undefined;
     const selectedTraderId = getSelectedTraderId(req);
-    const options: { equityDays?: number; selectedTraderId?: string } = {};
+    const options: { equityDays?: number; selectedTraderId?: string; userEmail?: string } = {};
     if (equityDays != null && Number.isFinite(equityDays) && equityDays > 0) options.equityDays = equityDays;
     if (selectedTraderId) options.selectedTraderId = selectedTraderId;
+    if (req.user?.email) options.userEmail = req.user.email;
     const analytics = await getTradeAnalyticsForUser(userId, options);
     res.json({ success: true, data: analytics });
   } catch (error) {
@@ -86,7 +87,7 @@ export async function getLinkedTraders(req: Request, res: Response, next: NextFu
     }
     let list: Awaited<ReturnType<typeof getLinkedTradersForUser>> = [];
     try {
-      list = await getLinkedTradersForUser(userId);
+      list = await getLinkedTradersForUser(userId, req.user?.email);
     } catch {
       list = [];
     }

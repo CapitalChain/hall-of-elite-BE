@@ -135,6 +135,39 @@ export async function getConclaveAccountNameByLogin(loginStr: string): Promise<s
 }
 
 /**
+ * Resolve MT5 login(s) from CC Conclave "accounts" by email (case-insensitive).
+ * Used so Capital Chain login (email) can show dashboard data without manual link when accounts.email matches.
+ */
+export async function getLoginsByEmailFromConclave(userEmail: string): Promise<string[]> {
+  const email = String(userEmail ?? "").trim();
+  if (!email) return [];
+  try {
+    const rows = await prisma.$queryRaw<Array<{ login: bigint }>>(
+      Prisma.sql`SELECT login FROM accounts WHERE LOWER(TRIM(email)) = LOWER(TRIM(${email})) ORDER BY login ASC`
+    );
+    return rows.map((r) => String(Number(r.login)));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Get accounts from CC Conclave by email (login + name). For listing "your" MT5 accounts when no links exist.
+ */
+export async function getConclaveAccountsByEmail(userEmail: string): Promise<Array<{ login: string; name: string | null }>> {
+  const email = String(userEmail ?? "").trim();
+  if (!email) return [];
+  try {
+    const rows = await prisma.$queryRaw<Array<{ login: bigint; name: string | null }>>(
+      Prisma.sql`SELECT login, name FROM accounts WHERE LOWER(TRIM(email)) = LOWER(TRIM(${email})) ORDER BY login ASC`
+    );
+    return rows.map((r) => ({ login: String(Number(r.login)), name: r.name?.trim() ?? null }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Check if a login exists in CC Conclave "accounts". Used to validate link without mt5_traders.
  */
 export async function conclaveAccountExists(loginStr: string): Promise<boolean> {

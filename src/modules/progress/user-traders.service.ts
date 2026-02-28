@@ -3,6 +3,8 @@ import { AppError } from "../../middlewares/errorHandler";
 import {
   getConclaveAccountNameByLogin,
   conclaveAccountExists,
+  getConclaveAccountsByEmail,
+  isConclaveAvailable,
 } from "./conclave.datasource";
 
 /**
@@ -20,16 +22,30 @@ export interface LinkedTraderDto {
 
 /**
  * List all MT5 accounts (logins) linked to this Capital Chain user.
- * Display names from cc-conclave "accounts" when mt5_traders is not used.
+ * When no links exist, returns Conclave accounts matching userEmail (accounts.email) so dashboard can show data without manual link.
  * Returns [] if user_trader_links table is missing or any query fails (avoids 500).
  */
-export async function getLinkedTradersForUser(ccUserId: string): Promise<LinkedTraderDto[]> {
+export async function getLinkedTradersForUser(
+  ccUserId: string,
+  userEmail?: string | null
+): Promise<LinkedTraderDto[]> {
   try {
     const links = await prisma.userTraderLink.findMany({
       where: { ccUserId },
       orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     });
-    if (links.length === 0) return [];
+    if (links.length === 0) {
+      if (userEmail?.trim() && (await isConclaveAvailable())) {
+        const accounts = await getConclaveAccountsByEmail(userEmail);
+        return accounts.map((a, i) => ({
+          traderId: a.login,
+          displayName: a.name ?? a.login,
+          displayLabel: null,
+          isPrimary: i === 0,
+        }));
+      }
+      return [];
+    }
 
     const nameById = new Map<string, string>();
     try {
