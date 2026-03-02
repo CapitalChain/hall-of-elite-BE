@@ -35,6 +35,16 @@ export interface RecentTradeDto {
   netPnl: number; // profitLoss - fees
 }
 
+/** One open position from Conclave positions table */
+export interface OpenPositionDto {
+  positionId: number;
+  symbol: string;
+  volume: number;
+  avgPrice: number;
+  floatingPnl: number;
+  openTime: string; // ISO
+}
+
 export interface UserTradeAnalyticsResponse {
   /** From Mt5TraderMetrics; 0 if no metrics */
   winRate: number;
@@ -61,4 +71,6 @@ export interface UserTradeAnalyticsResponse {
   currentBalance?: number | null;
   /** High-water mark: from DB if available, else derived from cumulative PnL */
   hwmBalance?: number | null;
+  /** Open positions from cc-conclave positions table (when Conclave is used) */
+  openPositions?: OpenPositionDto[];
 }

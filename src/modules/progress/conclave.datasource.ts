@@ -105,6 +105,51 @@ async function getCashflowsForLogin(loginStr: string): Promise<Array<{ type: str
   }
 }
 
+/**
+ * Get open positions for an account (login) from Conclave "positions".
+ */
+export async function getOpenPositionsForLogin(loginStr: string): Promise<
+  Array<{
+    position_id: number;
+    symbol: string;
+    volume: number;
+    avg_price: number;
+    floating_pnl: number;
+    time_msc: number;
+  }>
+> {
+  const login = toLoginParam(loginStr);
+  try {
+    const loginNum = Number(login);
+    if (!Number.isFinite(loginNum) || loginNum < 0) return [];
+    const rows = await prisma.$queryRaw<
+      Array<{
+        position_id: bigint;
+        symbol: string;
+        volume: unknown;
+        avg_price: unknown;
+        floating_pnl: unknown;
+        time_msc: bigint;
+      }>
+    >(Prisma.sql`
+      SELECT position_id, symbol, volume, avg_price, floating_pnl, time_msc
+      FROM positions
+      WHERE login = ${loginNum}
+      ORDER BY time_msc ASC
+    `);
+    return rows.map((r) => ({
+      position_id: Number(r.position_id),
+      symbol: r.symbol ?? "",
+      volume: Number(r.volume ?? 0),
+      avg_price: Number(r.avg_price ?? 0),
+      floating_pnl: Number(r.floating_pnl ?? 0),
+      time_msc: Number(r.time_msc),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /** Check if CC Conclave "deals" table exists and is queryable. */
 export async function isConclaveAvailable(): Promise<boolean> {
   try {

@@ -6,11 +6,13 @@ import type {
   UserTradeAnalyticsResponse,
   EquityPoint,
   RecentTradeDto,
+  OpenPositionDto,
 } from "./progress.types";
 import { tradeAnalyticsDataSource } from "./analytics.datasource.prisma";
 import {
   conclaveAnalyticsDataSource,
   getConclaveBalanceAndHwm,
+  getOpenPositionsForLogin,
   isConclaveAvailable,
   getLoginsByEmailFromConclave,
 } from "./conclave.datasource";
@@ -133,6 +135,7 @@ export async function getTradeAnalyticsForUser(
     recentTrades: [],
     currentBalance: null,
     hwmBalance: null,
+    openPositions: [],
   };
 
   if (!traderId) return defaults;
@@ -151,19 +154,29 @@ export async function getTradeAnalyticsForUser(
   let closedTrades: Awaited<ReturnType<typeof tradeAnalyticsDataSource.getClosedTrades>> = [];
   let currentBalance: number | null = null;
   let hwmBalance: number | null = null;
+  let openPositions: OpenPositionDto[] = [];
 
   if (useConclave) {
-    const [m, p, trades, balanceHwm] = await Promise.all([
+    const [m, p, trades, balanceHwm, positions] = await Promise.all([
       conclaveAnalyticsDataSource.getMetrics(conclaveLogin),
       conclaveAnalyticsDataSource.getPayout(conclaveLogin),
       conclaveAnalyticsDataSource.getClosedTrades(conclaveLogin, { fromDate: equityFrom }),
       getConclaveBalanceAndHwm(conclaveLogin),
+      getOpenPositionsForLogin(conclaveLogin),
     ]);
     metrics = m;
     payout = p;
     closedTrades = trades;
     currentBalance = balanceHwm.currentBalance;
     hwmBalance = balanceHwm.hwmBalance;
+    openPositions = positions.map((pos) => ({
+      positionId: pos.position_id,
+      symbol: pos.symbol,
+      volume: pos.volume,
+      avgPrice: pos.avg_price,
+      floatingPnl: pos.floating_pnl,
+      openTime: new Date(pos.time_msc).toISOString(),
+    }));
   }
 
   if (!useConclave) {
@@ -272,6 +285,7 @@ export async function getTradeAnalyticsForUser(
     avgTradeDuration,
     currentBalance: currentBalance ?? undefined,
     hwmBalance: hwmBalance ?? undefined,
+    openPositions: openPositions.length > 0 ? openPositions : undefined,
   };
 }
 
